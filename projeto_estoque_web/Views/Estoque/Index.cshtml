@@ -1,4 +1,4 @@
-@model projeto_estoque_web.Models.view_models.EstoqueViewModel
+﻿@model projeto_estoque_web.Models.view_models.EstoqueViewModel
 
 @{
     ViewData["Title"] = "Estoque";
@@ -9,34 +9,63 @@
 }
 
 <div class="estoque">
-
     <div class="estoque-header">
         <div>
             <h1>Estoque</h1>
             <p>Controle de estoque da loja</p>
         </div>
+        <a asp-controller="Produtos" asp-action="Criar" asp-route-retorno="estoque" class="btn-novo">+ Novo produto</a>
     </div>
 
     <partial name="_Navegacao" />
 
-    <!-- Lista de produtos -->
-    <div class="estoque-panel">
+    @if (TempData["Mensagem"] != null)
+    {
+        <div class="alert-ok">
+            @TempData["Mensagem"]
+        </div>
+    }
 
+    <div class="estoque-cards">
+        <div class="estoque-card">
+            <div class="card-icon">📦</div>
+            <div>
+                <span>Total de produtos</span>
+                <strong>@Model.TotalProdutos</strong>
+            </div>
+        </div>
+        <div class="estoque-card">
+            <div class="card-icon alert">⚠️</div>
+            <div>
+                <span>Estoque baixo</span>
+                <strong>@Model.EstoqueBaixo</strong>
+            </div>
+        </div>
+        <div class="estoque-card">
+            <div class="card-icon">🗂️</div>
+            <div>
+                <span>Categorias</span>
+                <strong>@Model.CategoriasCadastradas</strong>
+            </div>
+        </div>
+        <div class="estoque-card">
+            <div class="card-icon">💰</div>
+            <div>
+                <span>Valor em estoque</span>
+                <strong>@Model.ValorTotalEstoque.ToString("C")</strong>
+            </div>
+        </div>
+    </div>
+
+    <div class="estoque-panel">
         <div class="panel-header">
             <div>
                 <h2>Lista de produtos</h2>
                 <span>@Model.TotalProdutos produto(s)</span>
             </div>
-
             <form method="get" asp-action="Index" class="search-form">
-                <input type="text"
-                       name="busca"
-                       value="@Model.Busca"
-                       placeholder="Buscar por nome ou categoria" />
-
-                <button type="submit" class="btn-buscar">
-                    Buscar
-                </button>
+                <input type="text" name="busca" value="@Model.Busca" placeholder="Buscar por nome ou categoria" />
+                <button type="submit" class="btn-buscar">Buscar</button>
             </form>
         </div>
 
@@ -47,42 +76,47 @@
         else
         {
             <div class="table-container">
-
                 <table>
-
                     <thead>
                         <tr>
                             <th>Produto</th>
+                            <th>Localização</th>
                             <th>Estoque</th>
                             <th>Status</th>
                             <th>Ações</th>
                         </tr>
                     </thead>
-
                     <tbody>
-
                         @foreach (var produto in Model.Produtos)
                         {
                             <tr>
                                 <td class="produto-nome">
                                     @produto.Nome
                                 </td>
-
+                                <td class="produto-localizacao">
+                                    @if (string.IsNullOrEmpty(produto.Localizacao))
+                                    {
+                                        <span class="sem-localizacao">—</span>
+                                    }
+                                    else
+                                    {
+                                        @produto.Localizacao
+                                    }
+                                </td>
                                 <td>
                                     @produto.Quantidade
                                 </td>
-
                                 <td>
                                     <span class="status @produto.StatusClasse">
                                         @produto.Status
                                     </span>
                                 </td>
-
                                 <td>
                                     <div class="acoes">
                                         <a asp-controller="Produtos"
                                            asp-action="Editar"
                                            asp-route-id="@produto.Id"
+                                           asp-route-retorno="estoque"
                                            class="btn-lapis"
                                            title="Editar produto">
                                             ✏️
@@ -91,18 +125,14 @@
                                 </td>
                             </tr>
                         }
-
                     </tbody>
-
                 </table>
-
             </div>
 
             <!-- Paginação -->
             @if (Model.TotalPaginas > 1)
             {
                 <div class="estoque-paginacao">
-
                     <a asp-action="Index"
                        asp-route-busca="@Model.Busca"
                        asp-route-pagina="@(Model.PaginaAtual - 1)"
@@ -126,12 +156,8 @@
                        class="page-btn @(Model.PaginaAtual == Model.TotalPaginas ? "disabled" : "")">
                         Próxima ›
                     </a>
-
                 </div>
             }
-
         }
-
     </div>
-
 </div>

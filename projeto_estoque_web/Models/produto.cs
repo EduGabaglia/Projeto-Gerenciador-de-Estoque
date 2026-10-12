@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace projeto_estoque_web.Models
 {
@@ -21,6 +21,10 @@ namespace projeto_estoque_web.Models
         [Required(ErrorMessage = "Informe a quantidade em estoque.")]
         [Range(0, 1000000, ErrorMessage = "A quantidade não pode ser negativa.")]
         public int Quantidade { get; set; }
+
+        [Display(Name = "Localização no galpão")]
+        [StringLength(100, ErrorMessage = "A localização deve ter no máximo 100 caracteres.")]
+        public string Localizacao { get; set; } = string.Empty;
 
         public string Status => Quantidade switch
         {

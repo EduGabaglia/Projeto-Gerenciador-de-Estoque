@@ -9,6 +9,22 @@ namespace projeto_estoque_web.Models.view_models
 
         public List<PedidoResumoViewModel> UltimosPedidos { get; set; } = new();
         public List<ProdutoMaisVendidoViewModel> ProdutosMaisVendidos { get; set; } = new();
+
+        public int PromocoesAtivas { get; set; }
+        public int ProdutosEmPromocao { get; set; }
+        public decimal EconomiaPromocional { get; set; }
+        public List<ItemPromocaoViewModel> ItensEmPromocao { get; set; } = new();
+    }
+
+    public class ItemPromocaoViewModel
+    {
+        public int ProdutoId { get; set; }
+        public string NomeProduto { get; set; } = string.Empty;
+        public string NomePromocao { get; set; } = string.Empty;
+        public decimal PrecoTabela { get; set; }
+        public decimal DescontoPercentual { get; set; }
+        public decimal PrecoPromocional { get; set; }
+        public decimal Economia { get; set; }
     }
 
     public class PedidoResumoViewModel

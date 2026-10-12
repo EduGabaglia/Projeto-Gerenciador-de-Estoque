@@ -1,10 +1,13 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace projeto_estoque_web.Models.view_models
 {
     public class EstoqueViewModel
     {
         public int TotalProdutos { get; set; }
+        public int EstoqueBaixo { get; set; }
+        public int CategoriasCadastradas { get; set; }
+        public decimal ValorTotalEstoque { get; set; }
 
         public List<Models.Produto> Produtos { get; set; } = new();
 
