@@ -139,6 +139,89 @@
     </div>
 
 
+    <!-- Promoções ativas -->
+    <div class="dashboard-panel orders-panel">
+
+        <div class="panel-header">
+            <div>
+                <h2>Promoções ativas</h2>
+                <span>
+                    @Model.PromocoesAtivas promoção(ões) · @Model.ProdutosEmPromocao produto(s) ·
+                    economia de @Model.EconomiaPromocional.ToString("C") por unidade
+                </span>
+            </div>
+
+            <a asp-controller="Promocoes"
+               asp-action="Index"
+               class="view-all">
+                Ver todas
+            </a>
+        </div>
+
+        @if (Model.ItensEmPromocao.Count == 0)
+        {
+            <p class="empty-state">Nenhuma promoção ativa no momento.</p>
+        }
+        else
+        {
+
+            <div class="table-container">
+
+                <table>
+
+                    <thead>
+                        <tr>
+                            <th>Produto</th>
+                            <th>Promoção</th>
+                            <th>Desconto</th>
+                            <th>Preço de tabela</th>
+                            <th>Preço promocional</th>
+                            <th>Economia</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        @foreach (var item in Model.ItensEmPromocao)
+                        {
+                            <tr>
+                                <td class="produto-nome">
+                                    @item.NomeProduto
+                                </td>
+
+                                <td>
+                                    @item.NomePromocao
+                                </td>
+
+                                <td>
+                                    <span class="desconto-tag">-@item.DescontoPercentual.ToString("N2")%</span>
+                                </td>
+
+                                <td class="preco-tabela">
+                                    @item.PrecoTabela.ToString("C")
+                                </td>
+
+                                <td class="preco-promo">
+                                    @item.PrecoPromocional.ToString("C")
+                                </td>
+
+                                <td class="preco-promo">
+                                    @item.Economia.ToString("C")
+                                </td>
+                            </tr>
+                        }
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        }
+
+    </div>
+
+
     <!-- Últimos pedidos -->
     <div class="dashboard-panel orders-panel">
 

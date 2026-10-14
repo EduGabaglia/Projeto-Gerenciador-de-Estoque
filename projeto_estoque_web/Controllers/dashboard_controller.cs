@@ -25,6 +25,25 @@ namespace projeto_estoque_web.Controllers
                 .Take(4)
                 .ToList();
 
+            var ativas = PromocoesController.TodasAsPromocoes
+                .Where(p => p.Ativa)
+                .ToList();
+
+            var itensEmPromocao = ativas
+                .SelectMany(p => p.Itens.Select(i => new ItemPromocaoViewModel
+                {
+                    ProdutoId = i.ProdutoId,
+                    NomeProduto = i.NomeProduto,
+                    NomePromocao = p.Nome,
+                    PrecoTabela = i.PrecoTabela,
+                    DescontoPercentual = p.DescontoPercentual,
+                    PrecoPromocional = i.PrecoPromocional(p.DescontoPercentual),
+                    Economia = i.Economia(p.DescontoPercentual)
+                }))
+                .OrderByDescending(x => x.Economia)
+                .Take(6)
+                .ToList();
+
             var model = new DashboardViewModel
             {
                 TotalProdutos = produtos.Count,
@@ -49,7 +68,16 @@ namespace projeto_estoque_web.Controllers
                     })
                     .ToList(),
 
-                ProdutosMaisVendidos = maisVendidos
+                ProdutosMaisVendidos = maisVendidos,
+
+                PromocoesAtivas = ativas.Count,
+                ProdutosEmPromocao = ativas
+                    .SelectMany(p => p.Itens)
+                    .Select(i => i.ProdutoId)
+                    .Distinct()
+                    .Count(),
+                EconomiaPromocional = ativas.Sum(p => p.EconomiaTotal),
+                ItensEmPromocao = itensEmPromocao
             };
 
             return View(model);

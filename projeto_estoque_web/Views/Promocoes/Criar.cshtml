@@ -1,0 +1,33 @@
+@model projeto_estoque_web.Models.Promocao
+
+@{
+    ViewData["Title"] = "Nova promoção";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/promocoes.css" asp-append-version="true" />
+}
+
+<div class="promocoes">
+
+    <div class="promocoes-header">
+        <div>
+            <h1>Nova promoção</h1>
+            <p>Pesquise os produtos e informe o desconto em percentual</p>
+        </div>
+    </div>
+
+    <form asp-action="Criar" method="post">
+
+        <div class="promocoes-panel">
+            <partial name="_PromocaoForm" model="Model" />
+        </div>
+
+    </form>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/promocoes.js" asp-append-version="true"></script>
+}

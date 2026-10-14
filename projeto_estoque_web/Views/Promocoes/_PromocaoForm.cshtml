@@ -1,0 +1,125 @@
+@model projeto_estoque_web.Models.Promocao
+@using System.Globalization
+
+<input asp-for="Id" type="hidden" />
+
+<div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+<div class="form-row">
+    <div class="form-group">
+        <label asp-for="Nome"></label>
+        <input asp-for="Nome" class="form-control" placeholder="Ex.: Semana do Café" />
+        <span asp-validation-for="Nome" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="DescontoPercentual"></label>
+        <input asp-for="DescontoPercentual"
+               id="descontoInput"
+               class="form-control"
+               step="0.01"
+               min="0.01"
+               max="99.99"
+               placeholder="Ex.: 10" />
+        <span asp-validation-for="DescontoPercentual" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="form-group">
+    <label class="form-check">
+        <input asp-for="Ativa" />
+        <span>Promoção ativa</span>
+    </label>
+    <span asp-validation-for="Ativa" class="text-danger"></span>
+</div>
+
+<div class="form-group">
+
+    <label>Produtos da promoção</label>
+
+    <div id="itensContainer">
+
+        @for (int i = 0; i < Model.Itens.Count; i++)
+        {
+            var item = Model.Itens[i];
+
+            <div class="item-row" data-produto-id="@item.ProdutoId" data-preco="@item.PrecoTabela.ToString(CultureInfo.InvariantCulture)">
+                <input type="hidden" name="Itens[@i].ProdutoId" value="@item.ProdutoId" />
+
+                <div class="item-nome">
+                    @item.NomeProduto
+                </div>
+
+                <div class="item-preco">
+                    <span class="preco-tabela">@item.PrecoTabela.ToString("C")</span>
+                    <span class="preco-seta">→</span>
+                    <span class="preco-promo" data-preco-promo></span>
+                </div>
+
+                <button type="button"
+                        class="item-remover"
+                        onclick="removerProduto(this)"
+                        aria-label="Remover produto">
+                    ×
+                </button>
+            </div>
+        }
+
+    </div>
+
+    <p class="itens-vazio @(Model.Itens.Count > 0 ? "hidden" : "")" id="itensVazio">
+        Nenhum produto adicionado ainda.
+    </p>
+
+</div>
+
+<div class="form-group">
+
+    <label for="buscaProduto">Adicionar produto</label>
+
+    <input type="search"
+           id="buscaProduto"
+           class="form-control"
+           placeholder="Pesquise por nome, categoria ou código"
+           autocomplete="off" />
+
+    <div class="picker-lista" id="listaProdutos"></div>
+
+    <p class="picker-vazio hidden" id="pickerVazio">
+        Nenhum produto encontrado.
+    </p>
+
+</div>
+
+<div class="form-actions">
+    <button type="submit" class="btn-salvar">
+        Salvar
+    </button>
+
+    <a asp-action="Index" class="btn-cancelar">
+        Cancelar
+    </a>
+</div>
+
+<script type="application/json" id="catalogoProdutos">@Html.Raw(ViewBag.Catalogo)</script>
+
+<template id="itemTemplate">
+    <div class="item-row">
+        <input type="hidden" name="Itens[0].ProdutoId" value="" />
+
+        <div class="item-nome"></div>
+
+        <div class="item-preco">
+            <span class="preco-tabela"></span>
+            <span class="preco-seta">→</span>
+            <span class="preco-promo" data-preco-promo></span>
+        </div>
+
+        <button type="button"
+                class="item-remover"
+                onclick="removerProduto(this)"
+                aria-label="Remover produto">
+            ×
+        </button>
+    </div>
+</template>

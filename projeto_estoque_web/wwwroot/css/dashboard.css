@@ -456,6 +456,58 @@ body.dark-mode .status.entregue {
 }
 
 /* =========================
+   PROMOÇÕES
+========================= */
+
+.produto-nome {
+  font-weight: 600;
+}
+
+.desconto-tag {
+  display: inline-block;
+  background: #eef4ff;
+  color: #2563eb;
+  border-radius: 20px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+body.dark-mode .desconto-tag {
+  background: #172554;
+  color: #93c5fd;
+}
+
+.preco-tabela {
+  color: #888888;
+  text-decoration: line-through;
+}
+
+body.dark-mode .preco-tabela {
+  color: #64748b;
+}
+
+.preco-promo {
+  color: #16804b;
+  font-weight: 700;
+}
+
+body.dark-mode .preco-promo {
+  color: #4ade80;
+}
+
+.empty-state {
+  text-align: center;
+  color: #888888;
+  padding: 30px;
+  font-size: 14px;
+}
+
+body.dark-mode .empty-state {
+  color: #9ca3af;
+}
+
+/* =========================
    RESPONSIVO
 ========================= */
 

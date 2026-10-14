@@ -1,26 +1,228 @@
+@model projeto_estoque_web.Models.view_models.PromocoesViewModel
+
 @{
     ViewData["Title"] = "Promoções";
 }
 
-<div class="dashboard">
+@section Styles {
+    <link rel="stylesheet" href="~/css/promocoes.css" asp-append-version="true" />
+}
 
-    <div class="dashboard-header">
+<div class="promocoes">
+
+    <div class="promocoes-header">
         <div>
             <h1>Promoções</h1>
-            <p>Crie e gerencie promoções da loja</p>
+            <p>Descontos em percentual aplicados aos produtos</p>
         </div>
+
+        <a asp-action="Criar" class="btn-novo">
+            + Nova promoção
+        </a>
     </div>
 
-    <div class="dashboard-panel">
+    @if (TempData["Mensagem"] != null)
+    {
+        <div class="alert-ok">
+            @TempData["Mensagem"]
+        </div>
+    }
 
-        <div class="panel-header">
+    <!-- Cards -->
+    <div class="promocoes-cards">
+
+        <div class="promocoes-card">
+            <div class="card-icon">
+                🏷️
+            </div>
+
             <div>
-                <h2>Promoções</h2>
-                <span>Em breve</span>
+                <span>Total de promoções</span>
+                <strong>@Model.TotalPromocoes</strong>
             </div>
         </div>
 
-        <p class="empty-state">Esta seção ainda está em construção.</p>
+        <div class="promocoes-card">
+            <div class="card-icon">
+                ✅
+            </div>
+
+            <div>
+                <span>Promoções ativas</span>
+                <strong>@Model.PromoçõesAtivas</strong>
+            </div>
+        </div>
+
+        <div class="promocoes-card">
+            <div class="card-icon">
+                📦
+            </div>
+
+            <div>
+                <span>Produtos em promoção</span>
+                <strong>@Model.ProdutosEmPromocao</strong>
+            </div>
+        </div>
+
+        <div class="promocoes-card">
+            <div class="card-icon alert">
+                💸
+            </div>
+
+            <div>
+                <span>Desconto médio</span>
+                <strong>@Model.DescontoMedio.ToString("N2")%</strong>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Lista de promoções -->
+    <div class="promocoes-panel">
+
+        <div class="panel-header">
+            <div>
+                <h2>Lista de promoções</h2>
+                <span>@Model.TotalPromocoes promoção(ões) cadastrada(s)</span>
+            </div>
+
+            <form method="get" asp-action="Index" class="search-form">
+                <input type="text"
+                       name="busca"
+                       value="@Model.Busca"
+                       placeholder="Buscar por nome, status ou produto" />
+
+                <button type="submit" class="btn-buscar">
+                    Buscar
+                </button>
+            </form>
+        </div>
+
+        @if (Model.Promocoes.Count == 0)
+        {
+            <p class="empty-state">Nenhuma promoção encontrada.</p>
+        }
+        else
+        {
+            <div class="table-container">
+
+                <table>
+
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Promoção</th>
+                            <th>Desconto</th>
+                            <th>Produtos</th>
+                            <th>Economia por unidade</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        @foreach (var promocao in Model.Promocoes)
+                        {
+                            <tr>
+                                <td>#@promocao.Id</td>
+
+                                <td class="promocao-nome">
+                                    @promocao.Nome
+                                </td>
+
+                                <td>
+                                    <span class="desconto-tag">-@promocao.DescontoPercentual.ToString("N2")%</span>
+                                </td>
+
+                                <td>
+                                    @promocao.TotalProdutos
+
+                                    <span class="produtos-detalhe">
+                                        @(string.Join(", ", promocao.Itens.Select(i => i.NomeProduto)))
+                                    </span>
+                                </td>
+
+                                <td>@promocao.EconomiaTotal.ToString("C")</td>
+
+                                <td>
+                                    <span class="status @promocao.StatusClasse">
+                                        @promocao.Status
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <div class="acoes">
+                                        <a asp-action="Editar"
+                                           asp-route-id="@promocao.Id"
+                                           class="btn-acoes editar">
+                                            Editar
+                                        </a>
+
+                                        <form asp-action="AlternarStatus"
+                                              asp-route-id="@promocao.Id"
+                                              asp-route-busca="@Model.Busca"
+                                              asp-route-pagina="@Model.PaginaAtual"
+                                              method="post"
+                                              class="form-excluir">
+                                            <button type="submit" class="btn-acoes @(promocao.Ativa ? "desativar" : "ativar")">
+                                                @(promocao.Ativa ? "Desativar" : "Ativar")
+                                            </button>
+                                        </form>
+
+                                        <form asp-action="Excluir"
+                                              asp-route-id="@promocao.Id"
+                                              method="post"
+                                              class="form-excluir"
+                                              onsubmit="return confirm('Excluir esta promoção?');">
+                                            <button type="submit" class="btn-acoes excluir">
+                                                Excluir
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+            <!-- Paginação -->
+            @if (Model.TotalPaginas > 1)
+            {
+                <div class="promocoes-paginacao">
+
+                    <a asp-action="Index"
+                       asp-route-busca="@Model.Busca"
+                       asp-route-pagina="@(Model.PaginaAtual - 1)"
+                       class="page-btn @(Model.PaginaAtual == 1 ? "disabled" : "")">
+                        ‹ Anterior
+                    </a>
+
+                    @for (int i = 1; i <= Model.TotalPaginas; i++)
+                    {
+                        <a asp-action="Index"
+                           asp-route-busca="@Model.Busca"
+                           asp-route-pagina="@i"
+                           class="page-btn @(i == Model.PaginaAtual ? "active" : "")">
+                            @i
+                        </a>
+                    }
+
+                    <a asp-action="Index"
+                       asp-route-busca="@Model.Busca"
+                       asp-route-pagina="@(Model.PaginaAtual + 1)"
+                       class="page-btn @(Model.PaginaAtual == Model.TotalPaginas ? "disabled" : "")">
+                        Próxima ›
+                    </a>
+
+                </div>
+            }
+
+        }
 
     </div>
 
