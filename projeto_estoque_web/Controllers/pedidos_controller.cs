@@ -1,3 +1,4 @@
+#if false
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using projeto_estoque_web.Models;
@@ -474,3 +475,4 @@ namespace projeto_estoque_web.Controllers
             => new SelectList(StatusDisponiveis, selecionado);
     }
 }
+#endif

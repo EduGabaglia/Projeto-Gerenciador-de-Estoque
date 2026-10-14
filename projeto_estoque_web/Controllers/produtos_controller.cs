@@ -1,5 +1,8 @@
+
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
+using projeto_estoque_web.Data;
 using projeto_estoque_web.Models;
 using projeto_estoque_web.Models.view_models;
 
@@ -8,59 +11,73 @@ namespace projeto_estoque_web.Controllers
     public class ProdutosController : Controller
     {
         private const int ItensPorPagina = 8;
+        private readonly AppDbContext _context;
 
-        private static readonly List<Produto> _produtos = new()
+        public ProdutosController(AppDbContext context)
         {
-            new Produto { Id = 1, Nome = "Arroz 5kg", Categoria = "Alimentos", Preco = 24.90m, Quantidade = 42 },
-            new Produto { Id = 2, Nome = "Feijão 1kg", Categoria = "Alimentos", Preco = 9.80m, Quantidade = 30 },
-            new Produto { Id = 3, Nome = "Óleo de cozinha 900ml", Categoria = "Alimentos", Preco = 8.50m, Quantidade = 12 },
-            new Produto { Id = 4, Nome = "Açúcar 1kg", Categoria = "Alimentos", Preco = 5.20m, Quantidade = 25 },
-            new Produto { Id = 5, Nome = "Café torrado 500g", Categoria = "Alimentos", Preco = 14.90m, Quantidade = 6 },
-            new Produto { Id = 6, Nome = "Leite integral 1L", Categoria = "Bebidas", Preco = 4.50m, Quantidade = 3 },
-            new Produto { Id = 7, Nome = "Suco de laranja 1L", Categoria = "Bebidas", Preco = 7.90m, Quantidade = 18 },
-            new Produto { Id = 8, Nome = "Refrigerante 2L", Categoria = "Bebidas", Preco = 9.90m, Quantidade = 0 },
-            new Produto { Id = 9, Nome = "Água mineral 500ml", Categoria = "Bebidas", Preco = 1.80m, Quantidade = 60 },
-            new Produto { Id = 10, Nome = "Sabonete", Categoria = "Higiene", Preco = 2.90m, Quantidade = 100 },
-            new Produto { Id = 11, Nome = "Shampoo 400ml", Categoria = "Higiene", Preco = 18.90m, Quantidade = 22 },
-            new Produto { Id = 12, Nome = "Detergente 500ml", Categoria = "Limpeza", Preco = 3.40m, Quantidade = 5 },
-            new Produto { Id = 13, Nome = "Álcool 1L", Categoria = "Limpeza", Preco = 6.90m, Quantidade = 4 },
-            new Produto { Id = 14, Nome = "Pão de forma", Categoria = "Padaria", Preco = 8.90m, Quantidade = 15 }
-        };
+            _context = context;
+        }
 
-        private static int _proximoId = _produtos.Count + 1;
-
-        internal static List<Produto> TodosOsProdutos => _produtos;
-
-        public IActionResult Index(string busca, int pagina = 1)
+        // LISTAR E PESQUISAR PRODUTOS
+        public async Task<IActionResult> Index(
+            string busca = "", int pagina = 1)
         {
-            var lista = _produtos.AsEnumerable();
+            var consulta = _context.Produtos
+                .AsNoTracking()
+                .Include(p => p.Categoria)
+                .Include(p => p.LocalizacaoGalpao)
+                .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(busca))
             {
-                var termo = busca.Trim().ToLower();
-                lista = lista.Where(p =>
-                    p.Nome.ToLower().Contains(termo) ||
-                    p.Categoria.ToLower().Contains(termo));
+                var termo = busca.Trim();
+
+                consulta = consulta.Where(p =>
+                    p.Nome.Contains(termo) ||
+                    (p.Categoria != null &&
+                     p.Categoria.Nome.Contains(termo)));
             }
 
-            var ordenados = lista.OrderBy(p => p.Nome).ToList();
+            // ESTATÍSTICAS
+            var totalProdutos = await _context.Produtos
+                .CountAsync();
 
-            var totalPaginas = Math.Max(1, (int)Math.Ceiling(ordenados.Count / (double)ItensPorPagina));
+            var estoqueBaixo = await _context.Produtos
+                .CountAsync(p =>
+                    p.Quantidade > 0 && p.Quantidade <= 5);
+
+            var categorias = await _context.Categorias
+                .CountAsync();
+
+            var valorTotal = await _context.Produtos
+                .SumAsync(p => (decimal?)
+                    (p.Preco * p.Quantidade)) ?? 0m;
+
+            // PAGINAÇÃO
+            var totalItensFiltrados = await consulta.CountAsync();
+
+            var totalPaginas = Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    totalItensFiltrados / (double)ItensPorPagina));
+
             pagina = Math.Clamp(pagina, 1, totalPaginas);
 
-            var paginaItens = ordenados
+            var produtos = await consulta
+                .OrderBy(p => p.Nome)
+                .ThenBy(p => p.Id)
                 .Skip((pagina - 1) * ItensPorPagina)
                 .Take(ItensPorPagina)
-                .ToList();
+                .ToListAsync();
 
             var model = new ProdutosViewModel
             {
-                TotalProdutos = _produtos.Count,
-                EstoqueBaixo = _produtos.Count(p => p.Quantidade <= 5),
-                CategoriasCadastradas = _produtos.Select(p => p.Categoria).Distinct().Count(),
-                ValorTotalEstoque = _produtos.Sum(p => p.Preco * p.Quantidade),
-                Produtos = paginaItens,
-                Busca = busca ?? string.Empty,
+                TotalProdutos = totalProdutos,
+                EstoqueBaixo = estoqueBaixo,
+                CategoriasCadastradas = categorias,
+                ValorTotalEstoque = valorTotal,
+                Produtos = produtos,
+                Busca = busca,
                 PaginaAtual = pagina,
                 TotalPaginas = totalPaginas
             };
@@ -68,86 +85,199 @@ namespace projeto_estoque_web.Controllers
             return View(model);
         }
 
-        public IActionResult Criar()
+        // ABRIR FORMULÁRIO DE CADASTRO
+        [HttpGet]
+        public async Task<IActionResult> Criar()
         {
-            ViewBag.Categorias = ListaCategorias();
+            ViewBag.Categorias = await ListaCategoriasAsync();
+            ViewBag.Localizacoes = await ListaLocalizacoesAsync();
+
             return View(new Produto());
         }
 
+        // CADASTRAR PRODUTO
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Criar(Produto produto)
+        public async Task<IActionResult> Criar(Produto produto)
         {
-            ViewBag.Categorias = ListaCategorias(produto.Categoria);
+            if (!await CategoriaValidaAsync(produto.CategoriaId))
+            {
+                ModelState.AddModelError(
+                    nameof(Produto.CategoriaId),
+                    "Selecione uma categoria válida e ativa.");
+            }
+
+            // Verificar se a localização existe no banco
+            if (produto.LocalizacaoId.HasValue)
+            {
+                bool localizacaoExiste = await _context.LocalizacoesGalpao
+                    .AnyAsync(l => l.Id == produto.LocalizacaoId.Value);
+
+                if (!localizacaoExiste)
+                {
+                    ModelState.AddModelError(
+                        nameof(Produto.LocalizacaoId),
+                        "Selecione uma localização válida.");
+                }
+            }
 
             if (!ModelState.IsValid)
+            {
+                ViewBag.Categorias =
+                    await ListaCategoriasAsync(produto.CategoriaId);
+
+                ViewBag.Localizacoes =
+                    await ListaLocalizacoesAsync(produto.LocalizacaoId);
+
                 return View(produto);
+            }
 
-            produto.Id = _proximoId++;
-            _produtos.Add(produto);
+            produto.Id = 0;
+            produto.Ativo = true;
+            produto.DataCadastro = DateTime.Now;
 
-            TempData["Mensagem"] = "Produto cadastrado com sucesso.";
+            _context.Produtos.Add(produto);
+            await _context.SaveChangesAsync();
+
+            TempData["Mensagem"] =
+                "Produto cadastrado com sucesso.";
 
             return RedirectToAction(nameof(Index));
         }
-
-        public IActionResult Editar(int id)
+        // ABRIR FORMULÁRIO DE EDIÇÃO
+        [HttpGet]
+        public async Task<IActionResult> Editar(int id)
         {
-            var produto = _produtos.FirstOrDefault(p => p.Id == id);
+            var produto = await _context.Produtos.FindAsync(id);
 
             if (produto is null)
                 return NotFound();
 
-            ViewBag.Categorias = ListaCategorias(produto.Categoria);
+            ViewBag.Categorias =
+                await ListaCategoriasAsync(produto.CategoriaId);
+
+            ViewBag.Localizacoes =
+                await ListaLocalizacoesAsync(produto.LocalizacaoId);
 
             return View(produto);
         }
 
+        // ATUALIZAR PRODUTO
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Editar(int id, Produto produto)
+        public async Task<IActionResult> Editar(
+            int id, Produto produto)
         {
             if (id != produto.Id)
                 return NotFound();
 
-            var existente = _produtos.FirstOrDefault(p => p.Id == id);
+            var existente = await _context.Produtos
+                .FindAsync(id);
 
             if (existente is null)
                 return NotFound();
 
-            ViewBag.Categorias = ListaCategorias(produto.Categoria);
-
-            if (!ModelState.IsValid)
-                return View(produto);
-
-            existente.Nome = produto.Nome;
-            existente.Categoria = produto.Categoria;
-            existente.Preco = produto.Preco;
-            existente.Quantidade = produto.Quantidade;
-
-            TempData["Mensagem"] = "Produto atualizado com sucesso.";
-
-            return RedirectToAction(nameof(Index));
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public IActionResult Excluir(int id)
-        {
-            var produto = _produtos.FirstOrDefault(p => p.Id == id);
-
-            if (produto is not null)
+            if (!await CategoriaValidaAsync(produto.CategoriaId))
             {
-                _produtos.Remove(produto);
-                TempData["Mensagem"] = "Produto excluído com sucesso.";
+                ModelState.AddModelError(
+                    nameof(Produto.CategoriaId),
+                    "Selecione uma categoria válida e ativa.");
             }
 
+            if (!ModelState.IsValid)
+            {
+                ViewBag.Categorias =
+                    await ListaCategoriasAsync(produto.CategoriaId);
+
+                ViewBag.Localizacoes =
+                    await ListaLocalizacoesAsync(produto.LocalizacaoId);
+
+                return View(produto);
+            }
+            if (produto.LocalizacaoId.HasValue)
+            {
+                bool localizacaoExiste = await _context.LocalizacoesGalpao
+                    .AnyAsync(l => l.Id == produto.LocalizacaoId.Value);
+
+                if (!localizacaoExiste)
+                {
+                    ModelState.AddModelError(
+                        nameof(Produto.LocalizacaoId),
+                        "Selecione uma localização válida.");
+                }
+            }
+
+            existente.Nome = produto.Nome;
+            existente.CategoriaId = produto.CategoriaId;
+            existente.Descricao = produto.Descricao;
+            existente.LocalizacaoId = produto.LocalizacaoId;
+            existente.Preco = produto.Preco;
+            existente.Quantidade = produto.Quantidade;
+            existente.Ativo = produto.Ativo;
+
+            await _context.SaveChangesAsync();
+
+            TempData["Mensagem"] =
+                "Produto atualizado com sucesso.";
+
+            return RedirectToAction(nameof(Index));
+        }
+        private async Task<SelectList> ListaLocalizacoesAsync(int? selecionada = null)
+        {
+            var localizacoes = await _context.LocalizacoesGalpao
+                .AsNoTracking()
+                .OrderBy(l => l.Localizacao)
+                .ToListAsync();
+
+            return new SelectList(
+                localizacoes,
+                "Id",
+                "Localizacao",
+                selecionada);
+        }
+
+        // EXCLUIR PRODUTO
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Excluir(int id)
+        {
+            var produto = await _context.Produtos
+                .FindAsync(id);
+
+            if (produto is null)
+                return NotFound();
+
+            _context.Produtos.Remove(produto);
+            await _context.SaveChangesAsync();
+
+            TempData["Mensagem"] =
+                "Produto excluído com sucesso.";
+
             return RedirectToAction(nameof(Index));
         }
 
-        private static SelectList ListaCategorias(string? selecionada = null)
-            => new SelectList(
-                CategoriasController.TodasAsCategorias.Select(c => c.Nome).ToList(),
+        // CARREGAR CATEGORIAS DO BANCO
+        private async Task<SelectList> ListaCategoriasAsync(
+            int? selecionada = null)
+        {
+            var categorias = await _context.Categorias
+                .AsNoTracking()
+                .Where(c => c.Ativo || c.Id == selecionada)
+                .OrderBy(c => c.Nome)
+                .ToListAsync();
+
+            return new SelectList(
+                categorias,
+                "Id",
+                "Nome",
                 selecionada);
+        }
+
+        // VERIFICAR SE A CATEGORIA EXISTE
+        private async Task<bool> CategoriaValidaAsync(int categoriaId)
+        {
+            return await _context.Categorias
+                .AnyAsync(c => c.Id == categoriaId && c.Ativo);
+        }
     }
 }

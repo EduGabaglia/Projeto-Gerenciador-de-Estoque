@@ -1,4 +1,7 @@
+
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using projeto_estoque_web.Data;
 using projeto_estoque_web.Models;
 using projeto_estoque_web.Models.view_models;
 
@@ -7,64 +10,111 @@ namespace projeto_estoque_web.Controllers
     public class CategoriasController : Controller
     {
         private const int ItensPorPagina = 8;
+        private readonly AppDbContext _context;
 
-        private static readonly List<Categoria> _categorias = new()
+      public CategoriasController(AppDbContext context)
+{
+    _context = context;
+}
+
+// TESTAR CONEXÃO COM O SQL SERVER
+[HttpGet]
+public async Task<IActionResult> TestarConexao()
+{
+    try
+    {
+        var conectado = await _context.Database.CanConnectAsync();
+
+        if (!conectado)
         {
-            new Categoria { Id = 1, Nome = "Alimentos", Descricao = "Produtos alimentícios em geral" },
-            new Categoria { Id = 2, Nome = "Bebidas", Descricao = "Sucos, refrigerantes, água e lácteos" },
-            new Categoria { Id = 3, Nome = "Higiene", Descricao = "Produtos de cuidado pessoal" },
-            new Categoria { Id = 4, Nome = "Limpeza", Descricao = "Produtos de limpeza doméstica" },
-            new Categoria { Id = 5, Nome = "Padaria", Descricao = "Pães, bolos e confeitaria" }
-        };
+            return Content("Não foi possível conectar ao SQL Server.");
+        }
 
-        private static int _proximoId = _categorias.Count + 1;
+        var totalCategorias = await _context.Categorias.CountAsync();
+        var totalProdutos = await _context.Produtos.CountAsync();
 
-        internal static List<Categoria> TodasAsCategorias => _categorias;
+        return Content(
+            $"Conexão realizada com sucesso!\n" +
+            $"Categorias cadastradas: {totalCategorias}\n" +
+            $"Produtos cadastrados: {totalProdutos}"
+        );
+    }
+    catch (Exception ex)
+    {
+        return Content($"Erro: {ex.Message}");
+    }
+}
 
-        public IActionResult Index(string busca, int pagina = 1)
+// LISTAR, PESQUISAR E PAGINAR CATEGORIAS
+public async Task<IActionResult> Index(
+    string busca = "", int pagina = 1)
         {
-            var lista = _categorias.AsEnumerable();
+            var consulta = _context.Categorias
+                .AsNoTracking()
+                .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(busca))
             {
-                var termo = busca.Trim().ToLower();
-                lista = lista.Where(c =>
-                    c.Nome.ToLower().Contains(termo) ||
-                    c.Descricao.ToLower().Contains(termo));
+                var termo = busca.Trim();
+
+                consulta = consulta.Where(c =>
+                    c.Nome.Contains(termo) ||
+                    (c.Descricao != null &&
+                     c.Descricao.Contains(termo)));
             }
 
-            var ordenadas = lista.OrderBy(c => c.Nome).ToList();
+            // ESTATÍSTICAS GERAIS
+            var totalCategorias = await _context.Categorias
+                .CountAsync();
 
-            var totalPaginas = Math.Max(1, (int)Math.Ceiling(ordenadas.Count / (double)ItensPorPagina));
+            var categoriasEmUso = await _context.Categorias
+                .CountAsync(c => _context.Produtos
+                    .Any(p => p.CategoriaId == c.Id));
+
+            var categoriasVazias =
+                totalCategorias - categoriasEmUso;
+
+            var totalProdutos = await _context.Produtos
+                .CountAsync();
+
+            var mediaProdutos = categoriasEmUso == 0
+                ? 0m
+                : Math.Round(
+                    totalProdutos / (decimal)categoriasEmUso,
+                    1);
+
+            // PAGINAÇÃO
+            var totalFiltrado = await consulta.CountAsync();
+
+            var totalPaginas = Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    totalFiltrado / (double)ItensPorPagina));
+
             pagina = Math.Clamp(pagina, 1, totalPaginas);
 
-            var paginaItens = ordenadas
+            // CONSULTA CATEGORIAS E QUANTIDADE DE PRODUTOS
+            var categorias = await consulta
+                .OrderBy(c => c.Nome)
+                .ThenBy(c => c.Id)
                 .Skip((pagina - 1) * ItensPorPagina)
                 .Take(ItensPorPagina)
-                .ToList();
-
-            var quantidades = ProdutosController.TodosOsProdutos
-                .GroupBy(p => p.Categoria)
-                .ToDictionary(g => g.Key, g => g.Count());
-
-            var categorias = paginaItens.Select(c => new CategoriaResumoViewModel
-            {
-                Id = c.Id,
-                Nome = c.Nome,
-                Descricao = c.Descricao,
-                QuantidadeProdutos = quantidades.GetValueOrDefault(c.Nome)
-            }).ToList();
-
-            var emUso = _categorias.Count(c => quantidades.ContainsKey(c.Nome));
+                .Select(c => new CategoriaResumoViewModel
+                {
+                    Id = c.Id,
+                    Nome = c.Nome,
+                    Descricao = c.Descricao ?? string.Empty,
+                    QuantidadeProdutos = _context.Produtos
+                        .Count(p => p.CategoriaId == c.Id)
+                })
+                .ToListAsync();
 
             var model = new CategoriasViewModel
             {
-                TotalCategorias = _categorias.Count,
-                CategoriasEmUso = emUso,
-                CategoriasVazias = _categorias.Count - emUso,
-                MediaProdutosPorCategoria = emUso == 0
-                    ? 0
-                    : Math.Round(ProdutosController.TodosOsProdutos.Count / (decimal)emUso, 1),
+                TotalCategorias = totalCategorias,
+                CategoriasEmUso = categoriasEmUso,
+                CategoriasVazias = categoriasVazias,
+                MediaProdutosPorCategoria = mediaProdutos,
                 Categorias = categorias,
                 Busca = busca ?? string.Empty,
                 PaginaAtual = pagina,
@@ -74,32 +124,49 @@ namespace projeto_estoque_web.Controllers
             return View(model);
         }
 
+        // ABRIR FORMULÁRIO DE CADASTRO
+        [HttpGet]
         public IActionResult Criar()
         {
             return View(new Categoria());
         }
 
+        // CADASTRAR CATEGORIA NO SQL SERVER
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Criar(Categoria categoria)
+        public async Task<IActionResult> Criar(Categoria categoria)
         {
-            if (NomeDuplicado(categoria.Nome, null))
-                ModelState.AddModelError(nameof(Categoria.Nome), "Já existe uma categoria com esse nome.");
+            categoria.Nome = categoria.Nome?.Trim()
+                ?? string.Empty;
+
+            if (await NomeDuplicadoAsync(categoria.Nome, null))
+            {
+                ModelState.AddModelError(
+                    nameof(Categoria.Nome),
+                    "Já existe uma categoria com esse nome.");
+            }
 
             if (!ModelState.IsValid)
                 return View(categoria);
 
-            categoria.Id = _proximoId++;
-            _categorias.Add(categoria);
+            categoria.Id = 0;
+            categoria.Ativo = true;
 
-            TempData["Mensagem"] = "Categoria cadastrada com sucesso.";
+            _context.Categorias.Add(categoria);
+            await _context.SaveChangesAsync();
+
+            TempData["Mensagem"] =
+                "Categoria cadastrada com sucesso.";
 
             return RedirectToAction(nameof(Index));
         }
 
-        public IActionResult Editar(int id)
+        // ABRIR FORMULÁRIO DE EDIÇÃO
+        [HttpGet]
+        public async Task<IActionResult> Editar(int id)
         {
-            var categoria = _categorias.FirstOrDefault(c => c.Id == id);
+            var categoria = await _context.Categorias
+                .FindAsync(id);
 
             if (categoria is null)
                 return NotFound();
@@ -107,71 +174,96 @@ namespace projeto_estoque_web.Controllers
             return View(categoria);
         }
 
+        // ATUALIZAR CATEGORIA NO SQL SERVER
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Editar(int id, Categoria categoria)
+        public async Task<IActionResult> Editar(
+            int id, Categoria categoria)
         {
             if (id != categoria.Id)
                 return NotFound();
 
-            var existente = _categorias.FirstOrDefault(c => c.Id == id);
+            var existente = await _context.Categorias
+                .FindAsync(id);
 
             if (existente is null)
                 return NotFound();
 
-            if (NomeDuplicado(categoria.Nome, id))
-                ModelState.AddModelError(nameof(Categoria.Nome), "Já existe uma categoria com esse nome.");
+            categoria.Nome = categoria.Nome?.Trim()
+                ?? string.Empty;
+
+            if (await NomeDuplicadoAsync(categoria.Nome, id))
+            {
+                ModelState.AddModelError(
+                    nameof(Categoria.Nome),
+                    "Já existe uma categoria com esse nome.");
+            }
 
             if (!ModelState.IsValid)
                 return View(categoria);
 
-            var nomeAntigo = existente.Nome;
-
             existente.Nome = categoria.Nome;
             existente.Descricao = categoria.Descricao;
 
-            if (!nomeAntigo.Equals(categoria.Nome, StringComparison.OrdinalIgnoreCase))
-            {
-                foreach (var produto in ProdutosController.TodosOsProdutos.Where(p => p.Categoria == nomeAntigo))
-                    produto.Categoria = categoria.Nome;
-            }
+            // Preserva o campo Ativo existente.
+            // O formulário atual não permite editá-lo.
 
-            TempData["Mensagem"] = "Categoria atualizada com sucesso.";
+            await _context.SaveChangesAsync();
+
+            TempData["Mensagem"] =
+                "Categoria atualizada com sucesso.";
 
             return RedirectToAction(nameof(Index));
         }
 
+        // EXCLUIR CATEGORIA
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Excluir(int id)
+        public async Task<IActionResult> Excluir(int id)
         {
-            var categoria = _categorias.FirstOrDefault(c => c.Id == id);
+            var categoria = await _context.Categorias
+                .FindAsync(id);
 
-            if (categoria is not null)
+            if (categoria is null)
+                return NotFound();
+
+            // VERIFICAR SE EXISTEM PRODUTOS VINCULADOS
+            var quantidadeProdutos = await _context.Produtos
+                .CountAsync(p => p.CategoriaId == id);
+
+            if (quantidadeProdutos > 0)
             {
-                var quantidade = ProdutosController.TodosOsProdutos.Count(p => p.Categoria == categoria.Nome);
+                TempData["Erro"] =
+                    $"Não é possível excluir a categoria " +
+                    $"\"{categoria.Nome}\" pois ela possui " +
+                    $"{quantidadeProdutos} produto(s).";
 
-                if (quantidade > 0)
-                {
-                    TempData["Erro"] = $"Não é possível excluir a categoria \"{categoria.Nome}\" pois ela possui {quantidade} produto(s).";
-                    return RedirectToAction(nameof(Index));
-                }
-
-                _categorias.Remove(categoria);
-                TempData["Mensagem"] = "Categoria excluída com sucesso.";
+                return RedirectToAction(nameof(Index));
             }
+
+            _context.Categorias.Remove(categoria);
+            await _context.SaveChangesAsync();
+
+            TempData["Mensagem"] =
+                "Categoria excluída com sucesso.";
 
             return RedirectToAction(nameof(Index));
         }
 
-        private static bool NomeDuplicado(string? nome, int? ignorarId)
+        // VERIFICAR SE O NOME JÁ EXISTE
+        private async Task<bool> NomeDuplicadoAsync(
+            string? nome, int? ignorarId)
         {
             if (string.IsNullOrWhiteSpace(nome))
                 return false;
 
-            return _categorias.Any(c =>
-                c.Id != ignorarId &&
-                c.Nome.Equals(nome.Trim(), StringComparison.OrdinalIgnoreCase));
+            var nomeNormalizado = nome.Trim().ToLower();
+
+            return await _context.Categorias
+                .AnyAsync(c =>
+                    (!ignorarId.HasValue ||
+                     c.Id != ignorarId.Value) &&
+                    c.Nome.ToLower() == nomeNormalizado);
         }
     }
 }

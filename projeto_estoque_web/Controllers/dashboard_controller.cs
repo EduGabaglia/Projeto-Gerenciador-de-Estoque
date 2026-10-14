@@ -1,13 +1,30 @@
+#if false
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using projeto_estoque_web.Data;
 using projeto_estoque_web.Models.view_models;
 
 namespace projeto_estoque_web.Controllers
 {
     public class DashboardController : Controller
     {
-        public IActionResult Index()
+        private readonly AppDbContext _context;
+
+        public DashboardController(AppDbContext context)
         {
-            var produtos = ProdutosController.TodosOsProdutos;
+            _context = context;
+        }
+
+        public async Task<IActionResult> Index()
+        {
+            // PRODUTOS DO SQL SERVER
+            var totalProdutos = await _context.Produtos
+                .CountAsync();
+
+            var estoqueBaixo = await _context.Produtos
+                .CountAsync(p => p.Quantidade <= 5);
+
+            // PEDIDOS AINDA EM MEMÓRIA
             var pedidos = PedidosController.TodosOsPedidos;
 
             var agora = DateTime.Now;
@@ -27,13 +44,17 @@ namespace projeto_estoque_web.Controllers
 
             var model = new DashboardViewModel
             {
-                TotalProdutos = produtos.Count,
-                EstoqueBaixo = produtos.Count(p => p.Quantidade <= 5),
-                PedidosPendentes = pedidos.Count(p => p.Status == "Pendente"),
+                TotalProdutos = totalProdutos,
+                EstoqueBaixo = estoqueBaixo,
+
+                PedidosPendentes = pedidos.Count(
+                    p => p.Status == "Pendente"),
+
                 VendasMes = pedidos
-                    .Where(p => p.Status != "Cancelado" &&
-                                p.Data.Year == agora.Year &&
-                                p.Data.Month == agora.Month)
+                    .Where(p =>
+                        p.Status != "Cancelado" &&
+                        p.Data.Year == agora.Year &&
+                        p.Data.Month == agora.Month)
                     .Sum(p => p.ValorTotal),
 
                 UltimosPedidos = pedidos
@@ -56,3 +77,4 @@ namespace projeto_estoque_web.Controllers
         }
     }
 }
+#endif

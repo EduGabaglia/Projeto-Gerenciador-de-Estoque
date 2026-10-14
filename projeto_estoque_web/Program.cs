@@ -1,8 +1,15 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Localization;
+using Microsoft.EntityFrameworkCore;
+using projeto_estoque_web.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection")
+    )
+);
 // Add services to the container.
 builder.Services.AddControllersWithViews(options =>
 {
@@ -37,6 +44,14 @@ if (!app.Environment.IsDevelopment())
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
+app.MapGet("/teste-banco", async (AppDbContext db) =>
+{
+    bool conectado = await db.Database.CanConnectAsync();
+
+    return conectado
+        ? Results.Ok("Banco conectado com sucesso!")
+        : Results.Problem("Não foi possível conectar ao banco.");
+});
 
 //app.UseHttpsRedirection();
 app.UseRouting();

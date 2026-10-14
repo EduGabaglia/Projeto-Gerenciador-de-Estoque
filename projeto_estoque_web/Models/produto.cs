@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace projeto_estoque_web.Models
 {
@@ -7,21 +8,35 @@ namespace projeto_estoque_web.Models
         public int Id { get; set; }
 
         [Required(ErrorMessage = "Informe o nome do produto.")]
-        [StringLength(80, ErrorMessage = "O nome deve ter no máximo 80 caracteres.")]
+        [StringLength(150)]
         public string Nome { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Selecione uma categoria.")]
-        public string Categoria { get; set; } = string.Empty;
+        [Range(1, int.MaxValue, ErrorMessage = "Selecione uma categoria.")]
+        public int CategoriaId { get; set; }
 
-        [Required(ErrorMessage = "Informe o preço do produto.")]
-        [Range(0.01, 1000000, ErrorMessage = "O preço deve ser maior que zero.")]
-        [DataType(DataType.Currency)]
+        public int? LocalizacaoId { get; set; }
+
+        public LocalizacaoGalpao? LocalizacaoGalpao { get; set; }
+
+        public Categoria? Categoria { get; set; }
+
+        [StringLength(500)]
+        public string? Descricao { get; set; }
+
+        [Required]
+        [Range(0.01, 1000000)]
+        [Column(TypeName = "decimal(10,2)")]
         public decimal Preco { get; set; }
 
-        [Required(ErrorMessage = "Informe a quantidade em estoque.")]
-        [Range(0, 1000000, ErrorMessage = "A quantidade não pode ser negativa.")]
+        [Range(0, 1000000)]
         public int Quantidade { get; set; }
 
+        public bool Ativo { get; set; } = true;
+
+        public DateTime DataCadastro { get; set; } = DateTime.Now;
+
+        [NotMapped]
         public string Status => Quantidade switch
         {
             <= 0 => "Esgotado",
@@ -29,6 +44,7 @@ namespace projeto_estoque_web.Models
             _ => "Disponível"
         };
 
+        [NotMapped]
         public string StatusClasse => Quantidade switch
         {
             <= 0 => "esgotado",

@@ -1,5 +1,8 @@
+
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
+using projeto_estoque_web.Data;
 using projeto_estoque_web.Models;
 using projeto_estoque_web.Models.view_models;
 
@@ -8,33 +11,53 @@ namespace projeto_estoque_web.Controllers
     public class EstoqueController : Controller
     {
         private const int ItensPorPagina = 8;
+        private readonly AppDbContext _context;
 
-        public IActionResult Index(string busca, int pagina = 1)
+        public EstoqueController(AppDbContext context)
         {
-            var lista = ProdutosController.TodosOsProdutos.AsEnumerable();
+            _context = context;
+        }
+
+        // LISTAGEM DO ESTOQUE
+        public async Task<IActionResult> Index(
+            string busca = "", int pagina = 1)
+        {
+            var consulta = _context.Produtos
+                .AsNoTracking()
+                .Include(p => p.Categoria)
+                .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(busca))
             {
-                var termo = busca.Trim().ToLower();
-                lista = lista.Where(p =>
-                    p.Nome.ToLower().Contains(termo) ||
-                    p.Categoria.ToLower().Contains(termo));
+                var termo = busca.Trim();
+
+                consulta = consulta.Where(p =>
+                    p.Nome.Contains(termo) ||
+                    (p.Categoria != null &&
+                     p.Categoria.Nome.Contains(termo)));
             }
 
-            var ordenados = lista.OrderBy(p => p.Nome).ToList();
+            var totalProdutos = await _context.Produtos.CountAsync();
+            var totalFiltrado = await consulta.CountAsync();
 
-            var totalPaginas = Math.Max(1, (int)Math.Ceiling(ordenados.Count / (double)ItensPorPagina));
+            var totalPaginas = Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    totalFiltrado / (double)ItensPorPagina));
+
             pagina = Math.Clamp(pagina, 1, totalPaginas);
 
-            var paginaItens = ordenados
+            var produtos = await consulta
+                .OrderBy(p => p.Nome)
+                .ThenBy(p => p.Id)
                 .Skip((pagina - 1) * ItensPorPagina)
                 .Take(ItensPorPagina)
-                .ToList();
+                .ToListAsync();
 
             var model = new EstoqueViewModel
             {
-                TotalProdutos = ProdutosController.TodosOsProdutos.Count,
-                Produtos = paginaItens,
+                TotalProdutos = totalProdutos,
+                Produtos = produtos,
                 Busca = busca ?? string.Empty,
                 PaginaAtual = pagina,
                 TotalPaginas = totalPaginas
@@ -43,115 +66,201 @@ namespace projeto_estoque_web.Controllers
             return View(model);
         }
 
-        public IActionResult Entrada()
+        // ENTRADA - FORMULÁRIO
+        [HttpGet]
+        public async Task<IActionResult> Entrada()
         {
-            ViewBag.Produtos = ListaProdutos();
+            ViewBag.Produtos = await ListaProdutosAsync();
             return View(new MovimentoEstoqueViewModel());
         }
 
+        // ENTRADA - SALVAR NO BANCO
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Entrada(MovimentoEstoqueViewModel movimento)
+        public async Task<IActionResult> Entrada(
+            MovimentoEstoqueViewModel movimento)
         {
-            ViewBag.Produtos = ListaProdutos();
+            if (movimento.Quantidade <= 0)
+            {
+                ModelState.AddModelError(
+                    nameof(movimento.Quantidade),
+                    "Informe uma quantidade maior que zero.");
+            }
 
             if (!ModelState.IsValid)
-                return View(movimento);
-
-            var produto = BuscarProduto(movimento.ProdutoId);
-
-            if (produto is null)
             {
-                ModelState.AddModelError(nameof(MovimentoEstoqueViewModel.ProdutoId), "Selecione um produto.");
+                ViewBag.Produtos = await ListaProdutosAsync();
                 return View(movimento);
             }
 
-            produto.Quantidade += movimento.Quantidade;
+            var produto = await _context.Produtos
+                .FindAsync(movimento.ProdutoId);
 
-            TempData["Mensagem"] = $"Entrada de {movimento.Quantidade} unidade(s) de \"{produto.Nome}\" registrada com sucesso.";
+            if (produto is null)
+            {
+                ModelState.AddModelError(
+                    nameof(movimento.ProdutoId),
+                    "Selecione um produto válido.");
+
+                ViewBag.Produtos = await ListaProdutosAsync();
+                return View(movimento);
+            }
+
+            try
+            {
+                produto.Quantidade = checked(
+                    produto.Quantidade + movimento.Quantidade);
+            }
+            catch (OverflowException)
+            {
+                ModelState.AddModelError(
+                    nameof(movimento.Quantidade),
+                    "A quantidade informada excede o limite permitido.");
+
+                ViewBag.Produtos = await ListaProdutosAsync();
+                return View(movimento);
+            }
+
+            await _context.SaveChangesAsync();
+
+            TempData["Mensagem"] =
+                $"Entrada de {movimento.Quantidade} unidade(s) " +
+                $"de \"{produto.Nome}\" registrada com sucesso.";
 
             return RedirectToAction(nameof(Index));
         }
 
-        public IActionResult Saida()
+        // SAÍDA - FORMULÁRIO
+        [HttpGet]
+        public async Task<IActionResult> Saida()
         {
-            ViewBag.Produtos = ListaProdutos();
+            ViewBag.Produtos = await ListaProdutosAsync();
             return View(new MovimentoEstoqueViewModel());
         }
 
+        // SAÍDA - ATUALIZAR BANCO
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Saida(MovimentoEstoqueViewModel movimento)
+        public async Task<IActionResult> Saida(
+            MovimentoEstoqueViewModel movimento)
         {
-            ViewBag.Produtos = ListaProdutos();
+            if (movimento.Quantidade <= 0)
+            {
+                ModelState.AddModelError(
+                    nameof(movimento.Quantidade),
+                    "Informe uma quantidade maior que zero.");
+            }
 
             if (!ModelState.IsValid)
+            {
+                ViewBag.Produtos = await ListaProdutosAsync();
                 return View(movimento);
+            }
 
-            var produto = BuscarProduto(movimento.ProdutoId);
+            var produto = await _context.Produtos
+                .FindAsync(movimento.ProdutoId);
 
             if (produto is null)
             {
-                ModelState.AddModelError(nameof(MovimentoEstoqueViewModel.ProdutoId), "Selecione um produto.");
+                ModelState.AddModelError(
+                    nameof(movimento.ProdutoId),
+                    "Selecione um produto válido.");
+
+                ViewBag.Produtos = await ListaProdutosAsync();
                 return View(movimento);
             }
 
             if (movimento.Quantidade > produto.Quantidade)
             {
-                ModelState.AddModelError(nameof(MovimentoEstoqueViewModel.Quantidade),
-                    $"Quantidade insuficiente em estoque ({produto.Quantidade} disponíveis).");
+                ModelState.AddModelError(
+                    nameof(movimento.Quantidade),
+                    $"Quantidade insuficiente em estoque " +
+                    $"({produto.Quantidade} disponíveis).");
+
+                ViewBag.Produtos = await ListaProdutosAsync();
                 return View(movimento);
             }
 
             produto.Quantidade -= movimento.Quantidade;
 
-            TempData["Mensagem"] = $"Saída de {movimento.Quantidade} unidade(s) de \"{produto.Nome}\" registrada com sucesso.";
+            await _context.SaveChangesAsync();
+
+            TempData["Mensagem"] =
+                $"Saída de {movimento.Quantidade} unidade(s) " +
+                $"de \"{produto.Nome}\" registrada com sucesso.";
 
             return RedirectToAction(nameof(Index));
         }
 
-        public IActionResult Ajuste()
+        // AJUSTE - FORMULÁRIO
+        [HttpGet]
+        public async Task<IActionResult> Ajuste()
         {
-            ViewBag.Produtos = ListaProdutos();
+            ViewBag.Produtos = await ListaProdutosAsync();
             return View(new AjusteEstoqueViewModel());
         }
 
+        // AJUSTE - SALVAR NO BANCO
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Ajuste(AjusteEstoqueViewModel movimento)
+        public async Task<IActionResult> Ajuste(
+            AjusteEstoqueViewModel movimento)
         {
-            ViewBag.Produtos = ListaProdutos();
+            if (movimento.NovaQuantidade < 0)
+            {
+                ModelState.AddModelError(
+                    nameof(movimento.NovaQuantidade),
+                    "A quantidade não pode ser negativa.");
+            }
 
             if (!ModelState.IsValid)
+            {
+                ViewBag.Produtos = await ListaProdutosAsync();
                 return View(movimento);
+            }
 
-            var produto = BuscarProduto(movimento.ProdutoId);
+            var produto = await _context.Produtos
+                .FindAsync(movimento.ProdutoId);
 
             if (produto is null)
             {
-                ModelState.AddModelError(nameof(AjusteEstoqueViewModel.ProdutoId), "Selecione um produto.");
+                ModelState.AddModelError(
+                    nameof(movimento.ProdutoId),
+                    "Selecione um produto válido.");
+
+                ViewBag.Produtos = await ListaProdutosAsync();
                 return View(movimento);
             }
 
             produto.Quantidade = movimento.NovaQuantidade;
 
-            TempData["Mensagem"] = $"Estoque de \"{produto.Nome}\" ajustado para {movimento.NovaQuantidade} unidade(s).";
+            await _context.SaveChangesAsync();
+
+            TempData["Mensagem"] =
+                $"Estoque de \"{produto.Nome}\" ajustado " +
+                $"para {movimento.NovaQuantidade} unidade(s).";
 
             return RedirectToAction(nameof(Index));
         }
 
-        private static Produto? BuscarProduto(int id)
-            => ProdutosController.TodosOsProdutos.FirstOrDefault(p => p.Id == id);
-
-        private static SelectList ListaProdutos()
+        // CARREGAR PRODUTOS PARA OS FORMULÁRIOS
+        private async Task<SelectList> ListaProdutosAsync()
         {
-            var produtos = ProdutosController.TodosOsProdutos
+            var produtos = await _context.Produtos
+                .AsNoTracking()
                 .OrderBy(p => p.Nome)
-                .ToDictionary(
-                    p => p.Id.ToString(),
-                    p => $"{p.Nome} — Estoque: {p.Quantidade}");
+                .Select(p => new
+                {
+                    p.Id,
+                    Descricao = p.Nome +
+                        " — Estoque: " + p.Quantidade
+                })
+                .ToListAsync();
 
-            return new SelectList(produtos, "Key", "Value");
+            return new SelectList(
+                produtos,
+                "Id",
+                "Descricao");
         }
     }
 }

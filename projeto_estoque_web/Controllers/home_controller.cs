@@ -5,6 +5,8 @@ namespace projeto_estoque_web.Controllers
     public class HomeController : Controller
     {
         public IActionResult Index()
-            => RedirectToAction(nameof(DashboardController.Index), "Dashboard");
+        {
+            return RedirectToAction("Index", "Produtos");
+        }
     }
 }
