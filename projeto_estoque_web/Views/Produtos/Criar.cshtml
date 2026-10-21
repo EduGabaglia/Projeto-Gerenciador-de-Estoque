@@ -1,0 +1,32 @@
+@model projeto_estoque_web.Models.Produto
+
+@{
+    ViewData["Title"] = "Novo produto";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/produtos.css" asp-append-version="true" />
+}
+
+<div class="produtos">
+
+    <div class="produtos-header">
+        <div>
+            <h1>Novo produto</h1>
+            <p>Preencha os dados para cadastrar um novo produto</p>
+        </div>
+    </div>
+
+    <form asp-action="Criar" method="post">
+
+        <div class="produtos-panel">
+            <partial name="_ProdutoForm" model="Model" />
+        </div>
+
+    </form>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,32 @@
+@model projeto_estoque_web.Models.Produto
+
+@{
+    ViewData["Title"] = "Editar produto";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/produtos.css" asp-append-version="true" />
+}
+
+<div class="produtos">
+
+    <div class="produtos-header">
+        <div>
+            <h1>Editar produto</h1>
+            <p>Atualize os dados do produto #@Model.Id</p>
+        </div>
+    </div>
+
+    <form asp-action="Editar" asp-route-id="@Model.Id" method="post">
+
+        <div class="produtos-panel">
+            <partial name="_ProdutoForm" model="Model" />
+        </div>
+
+    </form>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

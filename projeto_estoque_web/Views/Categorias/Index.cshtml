@@ -1,0 +1,214 @@
+@model projeto_estoque_web.Models.view_models.CategoriasViewModel
+
+@{
+    ViewData["Title"] = "Categorias";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/categorias.css" asp-append-version="true" />
+}
+
+<div class="categorias">
+
+    <div class="categorias-header">
+        <div>
+            <h1>Categorias</h1>
+            <p>Organização dos produtos por categoria</p>
+        </div>
+
+        <a asp-action="Criar" class="btn-novo">
+            + Nova categoria
+        </a>
+    </div>
+
+    @if (TempData["Mensagem"] != null)
+    {
+        <div class="alert-ok">
+            @TempData["Mensagem"]
+        </div>
+    }
+
+    @if (TempData["Erro"] != null)
+    {
+        <div class="alert-erro">
+            @TempData["Erro"]
+        </div>
+    }
+
+    <!-- Cards -->
+    <div class="categorias-cards">
+
+        <div class="categorias-card">
+            <div class="card-icon">
+                🗂️
+            </div>
+
+            <div>
+                <span>Total de categorias</span>
+                <strong>@Model.TotalCategorias</strong>
+            </div>
+        </div>
+
+        <div class="categorias-card">
+            <div class="card-icon">
+                📦
+            </div>
+
+            <div>
+                <span>Categorias em uso</span>
+                <strong>@Model.CategoriasEmUso</strong>
+            </div>
+        </div>
+
+        <div class="categorias-card">
+            <div class="card-icon alert">
+                ⚠️
+            </div>
+
+            <div>
+                <span>Categorias vazias</span>
+                <strong>@Model.CategoriasVazias</strong>
+            </div>
+        </div>
+
+        <div class="categorias-card">
+            <div class="card-icon">
+                📊
+            </div>
+
+            <div>
+                <span>Média de produtos por categoria</span>
+                <strong>@Model.MediaProdutosPorCategoria.ToString("0.#")</strong>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Lista de categorias -->
+    <div class="categorias-panel">
+
+        <div class="panel-header">
+            <div>
+                <h2>Lista de categorias</h2>
+                <span>@Model.TotalCategorias categorias cadastradas</span>
+            </div>
+
+            <form method="get" asp-action="Index" class="search-form">
+                <input type="text"
+                       name="busca"
+                       value="@Model.Busca"
+                       placeholder="Buscar por nome ou descrição" />
+
+                <button type="submit" class="btn-buscar">
+                    Buscar
+                </button>
+            </form>
+        </div>
+
+        @if (Model.Categorias.Count == 0)
+        {
+            <p class="empty-state">Nenhuma categoria encontrada.</p>
+        }
+        else
+        {
+            <div class="table-container">
+
+                <table>
+
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Nome</th>
+                            <th>Descrição</th>
+                            <th>Produtos</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        @foreach (var categoria in Model.Categorias)
+                        {
+                            <tr>
+                                <td>#@categoria.Id</td>
+
+                                <td class="categoria-nome">
+                                    @categoria.Nome
+                                </td>
+
+                                <td>
+                                    @categoria.Descricao
+                                </td>
+
+                                <td>
+                                    <span class="status @(categoria.EmUso ? "emuso" : "vazia")">
+                                        @categoria.QuantidadeProdutos produto(s)
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <div class="acoes">
+                                        <a asp-action="Editar"
+                                           asp-route-id="@categoria.Id"
+                                           class="btn-acoes editar">
+                                            Editar
+                                        </a>
+
+                                        <form asp-action="Excluir"
+                                              asp-route-id="@categoria.Id"
+                                              method="post"
+                                              class="form-excluir"
+                                              onsubmit="return confirm('Excluir esta categoria?');">
+                                            <button type="submit"
+                                                    class="btn-acoes excluir">
+                                                Excluir
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+            <!-- Paginação -->
+            @if (Model.TotalPaginas > 1)
+            {
+                <div class="categorias-paginacao">
+
+                    <a asp-action="Index"
+                       asp-route-busca="@Model.Busca"
+                       asp-route-pagina="@(Model.PaginaAtual - 1)"
+                       class="page-btn @(Model.PaginaAtual == 1 ? "disabled" : "")">
+                        ‹ Anterior
+                    </a>
+
+                    @for (int i = 1; i <= Model.TotalPaginas; i++)
+                    {
+                        <a asp-action="Index"
+                           asp-route-busca="@Model.Busca"
+                           asp-route-pagina="@i"
+                           class="page-btn @(i == Model.PaginaAtual ? "active" : "")">
+                            @i
+                        </a>
+                    }
+
+                    <a asp-action="Index"
+                       asp-route-busca="@Model.Busca"
+                       asp-route-pagina="@(Model.PaginaAtual + 1)"
+                       class="page-btn @(Model.PaginaAtual == Model.TotalPaginas ? "disabled" : "")">
+                        Próxima ›
+                    </a>
+
+                </div>
+            }
+
+        }
+
+    </div>
+
+</div>

@@ -1,0 +1,32 @@
+@model projeto_estoque_web.Models.Categoria
+
+@{
+    ViewData["Title"] = "Editar categoria";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/categorias.css" asp-append-version="true" />
+}
+
+<div class="categorias">
+
+    <div class="categorias-header">
+        <div>
+            <h1>Editar categoria</h1>
+            <p>Atualize os dados da categoria #@Model.Id</p>
+        </div>
+    </div>
+
+    <form asp-action="Editar" asp-route-id="@Model.Id" method="post">
+
+        <div class="categorias-panel">
+            <partial name="_CategoriaForm" model="Model" />
+        </div>
+
+    </form>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

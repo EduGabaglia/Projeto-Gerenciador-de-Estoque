@@ -1,0 +1,378 @@
+/* =========================
+   CONFIGURAÇÕES
+========================= */
+
+.configuracoes {
+    padding: 30px;
+}
+
+/* =========================
+   CABEÇALHO
+========================= */
+
+.configuracoes-header {
+    margin-bottom: 25px;
+}
+
+.configuracoes-header h1 {
+    margin: 0;
+
+    font-size: 28px;
+    font-weight: 700;
+
+    color: var(--text-color);
+}
+
+.configuracoes-header p {
+    margin: 6px 0 0;
+
+    font-size: 14px;
+
+    color: #777777;
+}
+
+/* =========================
+   ALERTAS
+========================= */
+
+.alert {
+    padding: 12px 16px;
+
+    border-radius: 8px;
+
+    margin-bottom: 20px;
+
+    font-size: 14px;
+}
+
+.alert-ok {
+    background: #e5f8ed;
+    color: #16804b;
+}
+
+.alert-erro {
+    background: #fdecec;
+    color: #dc2626;
+}
+
+.alert-info {
+    background: #eef4ff;
+    color: #2563eb;
+}
+
+/* =========================
+   CARDS
+========================= */
+
+.configuracoes-cards {
+    display: grid;
+
+    grid-template-columns: repeat(4, 1fr);
+
+    gap: 20px;
+
+    margin-bottom: 25px;
+}
+
+.configuracoes-card {
+    background: #ffffff;
+
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+
+    padding: 20px;
+
+    display: flex;
+    align-items: center;
+
+    gap: 15px;
+}
+
+.card-icon {
+    width: 45px;
+    height: 45px;
+
+    flex-shrink: 0;
+
+    border-radius: 8px;
+
+    background: #eef4ff;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 21px;
+}
+
+.card-icon.alert {
+    background: #fff4df;
+}
+
+.configuracoes-card span {
+    display: block;
+
+    font-size: 13px;
+
+    color: #777777;
+
+    margin-bottom: 5px;
+}
+
+.configuracoes-card strong {
+    display: block;
+
+    font-size: 16px;
+
+    color: #1f2937;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* =========================
+   PAINEL
+========================= */
+
+.configuracoes-panel {
+    background: #ffffff;
+
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+
+    padding: 20px;
+}
+
+.panel-header {
+    display: flex;
+
+    justify-content: space-between;
+    align-items: center;
+
+    margin-bottom: 20px;
+}
+
+.panel-header h2 {
+    font-size: 17px;
+    font-weight: 600;
+
+    margin: 0;
+
+    color: #1f2937;
+}
+
+.panel-header span {
+    font-size: 13px;
+
+    color: #888888;
+}
+
+/* =========================
+   FORMULÁRIO
+========================= */
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+
+    margin-bottom: 6px;
+
+    font-size: 13px;
+    font-weight: 700;
+
+    color: #555555;
+}
+
+.form-group input {
+    width: 100%;
+
+    padding: 10px 12px;
+
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+
+    box-sizing: border-box;
+
+    outline: none;
+
+    background: #ffffff;
+    color: #1f2937;
+
+    transition: border-color 0.2s ease;
+}
+
+.form-group input:focus {
+    border-color: #2563eb;
+}
+
+.form-row {
+    display: grid;
+
+    grid-template-columns: 1fr 1fr;
+
+    gap: 16px;
+}
+
+.form-uf {
+    max-width: 160px;
+}
+
+.form-actions {
+    display: flex;
+
+    gap: 10px;
+
+    margin-top: 20px;
+}
+
+.btn-salvar,
+.btn-cancelar {
+    padding: 10px 20px;
+
+    border: none;
+    border-radius: 8px;
+
+    font-size: 14px;
+    font-weight: 700;
+
+    cursor: pointer;
+
+    text-decoration: none;
+
+    display: inline-block;
+
+    transition: background-color 0.2s ease;
+}
+
+.btn-salvar {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+.btn-salvar:hover {
+    background: #1d4ed8;
+}
+
+.btn-cancelar {
+    background: #f3f4f6;
+    color: #555555;
+}
+
+.btn-cancelar:hover {
+    background: #e5e7eb;
+}
+
+.text-danger {
+    display: block;
+
+    font-size: 12px;
+
+    margin-top: 4px;
+}
+
+/* =========================
+   TEMA ESCURO
+========================= */
+
+body.dark .configuracoes-header p,
+body.dark .configuracoes-card span,
+body.dark .panel-header span {
+    color: #9ca3af;
+}
+
+body.dark .configuracoes-card,
+body.dark .configuracoes-panel {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+body.dark .configuracoes-card strong,
+body.dark .panel-header h2 {
+    color: #f9fafb;
+}
+
+body.dark .alert-info {
+    background: #172554;
+    color: #93c5fd;
+}
+
+body.dark .form-group label {
+    color: #d1d5db;
+}
+
+body.dark .form-group input {
+    background: #0f172a;
+    border-color: #334155;
+    color: #e5e7eb;
+}
+
+body.dark .form-group input:focus {
+    border-color: #60a5fa;
+}
+
+body.dark .form-group input::placeholder {
+    color: #6b7280;
+}
+
+body.dark .btn-salvar {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+body.dark .btn-salvar:hover {
+    background: #1d4ed8;
+}
+
+body.dark .btn-cancelar {
+    background: #334155;
+    color: #d1d5db;
+}
+
+body.dark .btn-cancelar:hover {
+    background: #475569;
+}
+
+/* =========================
+   RESPONSIVO
+========================= */
+
+@media (max-width: 1000px) {
+    .configuracoes-cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .configuracoes {
+        padding: 20px 15px;
+    }
+
+    .configuracoes-cards {
+        grid-template-columns: 1fr;
+    }
+
+    .configuracoes-card {
+        padding: 16px;
+    }
+
+    .configuracoes-header h1 {
+        font-size: 24px;
+    }
+
+    .configuracoes-panel {
+        padding: 15px;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+
+    .form-uf {
+        max-width: none;
+    }
+}

@@ -1,0 +1,34 @@
+@model projeto_estoque_web.Models.view_models.MovimentoEstoqueViewModel
+
+@{
+    ViewData["Title"] = "Entrada de estoque";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/estoque.css" asp-append-version="true" />
+}
+
+<div class="estoque">
+
+    <div class="estoque-header">
+        <div>
+            <h1>Entrada de estoque</h1>
+            <p>Registre a entrada de produtos no estoque</p>
+        </div>
+    </div>
+
+    <partial name="_Navegacao" />
+
+    <form asp-action="Entrada" method="post">
+
+        <div class="estoque-panel">
+            <partial name="_MovimentoForm" model="Model" />
+        </div>
+
+    </form>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

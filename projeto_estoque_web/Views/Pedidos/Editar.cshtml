@@ -1,0 +1,33 @@
+@model projeto_estoque_web.Models.Pedido
+
+@{
+    ViewData["Title"] = "Editar pedido";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/pedidos.css" asp-append-version="true" />
+}
+
+<div class="pedidos">
+
+    <div class="pedidos-header">
+        <div>
+            <h1>Editar pedido</h1>
+            <p>Atualize os dados do pedido #@Model.Id</p>
+        </div>
+    </div>
+
+    <form asp-action="Editar" asp-route-id="@Model.Id" method="post">
+
+        <div class="pedidos-panel">
+            <partial name="_PedidoForm" model="Model" />
+        </div>
+
+    </form>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/pedidos.js" asp-append-version="true"></script>
+}

@@ -1,0 +1,27 @@
+@{
+    var actionAtual = ViewContext.RouteData.Values["action"]?.ToString() ?? string.Empty;
+}
+
+<div class="estoque-tabs">
+
+    <a asp-action="Index"
+       class="btn-tab@(actionAtual.Equals("Index", StringComparison.OrdinalIgnoreCase) ? " active" : "")">
+        Visualizar
+    </a>
+
+    <a asp-action="Entrada"
+       class="btn-tab@(actionAtual.Equals("Entrada", StringComparison.OrdinalIgnoreCase) ? " active" : "")">
+        Entrada
+    </a>
+
+    <a asp-action="Saida"
+       class="btn-tab@(actionAtual.Equals("Saida", StringComparison.OrdinalIgnoreCase) ? " active" : "")">
+        Saída
+    </a>
+
+    <a asp-action="Ajuste"
+       class="btn-tab@(actionAtual.Equals("Ajuste", StringComparison.OrdinalIgnoreCase) ? " active" : "")">
+        Ajuste
+    </a>
+
+</div>

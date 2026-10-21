@@ -1,0 +1,252 @@
+@model projeto_estoque_web.Models.view_models.PedidosViewModel
+
+@{
+    ViewData["Title"] = "Pedidos";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/pedidos.css" asp-append-version="true" />
+}
+
+<div class="pedidos">
+
+    <div class="pedidos-header">
+        <div>
+            <h1>Pedidos</h1>
+            <p>Controle de pedidos e status</p>
+        </div>
+
+        <a asp-action="Criar" class="btn-novo">
+            + Novo pedido
+        </a>
+    </div>
+
+    @if (TempData["Mensagem"] != null)
+    {
+        <div class="alert-ok">
+            @TempData["Mensagem"]
+        </div>
+    }
+
+    @if (TempData["Erro"] != null)
+    {
+        <div class="alert-erro">
+            @TempData["Erro"]
+        </div>
+    }
+
+    <!-- Cards -->
+    <div class="pedidos-cards">
+
+        <div class="pedidos-card">
+            <div class="card-icon">
+                📦
+            </div>
+
+            <div>
+                <span>Total de pedidos</span>
+                <strong>@Model.TotalPedidos</strong>
+            </div>
+        </div>
+
+        <div class="pedidos-card">
+            <div class="card-icon alert">
+                🕒
+            </div>
+
+            <div>
+                <span>Pedidos pendentes</span>
+                <strong>@Model.PedidosPendentes</strong>
+            </div>
+        </div>
+
+        <div class="pedidos-card">
+            <div class="card-icon">
+                ✅
+            </div>
+
+            <div>
+                <span>Pedidos entregues</span>
+                <strong>@Model.PedidosEntregues</strong>
+            </div>
+        </div>
+
+        <div class="pedidos-card">
+            <div class="card-icon">
+                💰
+            </div>
+
+            <div>
+                <span>Receita total</span>
+                <strong>
+                    @Model.ReceitaTotal.ToString("C")
+                </strong>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Lista de pedidos -->
+    <div class="pedidos-panel">
+
+        <div class="panel-header">
+            <div>
+                <h2>Lista de pedidos</h2>
+                <span>@Model.TotalPedidos pedidos cadastrados</span>
+            </div>
+
+            <form method="get" asp-action="Index" class="search-form">
+                <input type="text"
+                       name="busca"
+                       value="@Model.Busca"
+                       placeholder="Buscar por cliente ou código" />
+
+                <button type="submit" class="btn-buscar">
+                    Buscar
+                </button>
+            </form>
+        </div>
+
+        @if (Model.Pedidos.Count == 0)
+        {
+            <p class="empty-state">Nenhum pedido encontrado.</p>
+        }
+        else
+        {
+            <div class="table-container">
+
+                <table>
+
+                    <thead>
+                        <tr>
+                            <th>Pedido</th>
+                            <th>Data</th>
+                            <th>Cliente</th>
+                            <th>Itens</th>
+                            <th>Valor</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        @foreach (var pedido in Model.Pedidos)
+                        {
+                            <tr>
+                                <td class="pedido-codigo">
+                                    #@pedido.Id
+                                </td>
+
+                                <td>
+                                    @pedido.Data.ToString("dd/MM/yyyy")
+                                </td>
+
+                                <td>
+                                    @pedido.Cliente
+                                </td>
+
+                                <td>
+                                    @pedido.QuantidadeItens
+                                </td>
+
+                                <td class="pedido-valor">
+                                    @pedido.Valor.ToString("C")
+                                </td>
+
+                                <td>
+                                    <form asp-action="AtualizarStatus"
+                                          asp-route-id="@pedido.Id"
+                                          asp-route-busca="@Model.Busca"
+                                          asp-route-pagina="@Model.PaginaAtual"
+                                          method="post"
+                                          class="form-status">
+
+                                        <select name="status"
+                                                class="status-select"
+                                                onchange="this.form.submit()"
+                                                aria-label="Alterar status">
+
+                                            @foreach (var s in (IEnumerable<string>)ViewBag.StatusDisponiveis)
+                                            {
+                                                if (s == pedido.Status)
+                                                {
+                                                    <option value="@s" selected="selected">@s</option>
+                                                }
+                                                else
+                                                {
+                                                    <option value="@s">@s</option>
+                                                }
+                                            }
+
+                                        </select>
+
+                                    </form>
+                                </td>
+
+                                <td>
+                                    <div class="acoes">
+                                        <a asp-action="Editar"
+                                           asp-route-id="@pedido.Id"
+                                           class="btn-acoes editar">
+                                            Editar
+                                        </a>
+
+                                        <form asp-action="Excluir"
+                                              asp-route-id="@pedido.Id"
+                                              method="post"
+                                              class="form-excluir"
+                                              onsubmit="return confirm('Excluir o pedido #@pedido.Id?');">
+                                            <button type="submit"
+                                                    class="btn-acoes excluir">
+                                                Excluir
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+            <!-- Paginação -->
+            @if (Model.TotalPaginas > 1)
+            {
+                <div class="pedidos-paginacao">
+
+                    <a asp-action="Index"
+                       asp-route-busca="@Model.Busca"
+                       asp-route-pagina="@(Model.PaginaAtual - 1)"
+                       class="page-btn @(Model.PaginaAtual == 1 ? "disabled" : "")">
+                        ‹ Anterior
+                    </a>
+
+                    @for (int i = 1; i <= Model.TotalPaginas; i++)
+                    {
+                        <a asp-action="Index"
+                           asp-route-busca="@Model.Busca"
+                           asp-route-pagina="@i"
+                           class="page-btn @(i == Model.PaginaAtual ? "active" : "")">
+                            @i
+                        </a>
+                    }
+
+                    <a asp-action="Index"
+                       asp-route-busca="@Model.Busca"
+                       asp-route-pagina="@(Model.PaginaAtual + 1)"
+                       class="page-btn @(Model.PaginaAtual == Model.TotalPaginas ? "disabled" : "")">
+                        Próxima ›
+                    </a>
+
+                </div>
+            }
+
+        }
+
+    </div>
+
+</div>

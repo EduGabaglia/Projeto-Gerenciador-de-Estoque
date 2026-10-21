@@ -1,0 +1,122 @@
+@model projeto_estoque_web.Models.Pedido
+
+<input asp-for="Id" type="hidden" />
+
+<div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+<div class="form-row">
+    <div class="form-group">
+        <label asp-for="Cliente"></label>
+        <input asp-for="Cliente" class="form-control" placeholder="Nome do cliente" />
+        <span asp-validation-for="Cliente" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="Data"></label>
+        <input asp-for="Data" class="form-control" type="date" />
+        <span asp-validation-for="Data" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="form-group">
+        <label asp-for="Status"></label>
+        <select asp-for="Status" asp-items="@(ViewBag.StatusList as SelectList)" class="form-control"></select>
+        <span asp-validation-for="Status" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+    <label>Itens do pedido</label>
+
+    <div id="itensContainer">
+
+        @for (int i = 0; i < Model.Itens.Count; i++)
+        {
+            <div class="item-row">
+                <div class="item-campo">
+                    <select name="Itens[@i].ProdutoId" class="form-control item-produto">
+                        <option value="">Selecione o produto</option>
+
+                        @foreach (var p in (IEnumerable<SelectListItem>)ViewBag.Produtos)
+                        {
+                            if (Model.Itens[i].ProdutoId.ToString() == p.Value)
+                            {
+                                <option value="@p.Value" selected="selected">@p.Text</option>
+                            }
+                            else
+                            {
+                                <option value="@p.Value">@p.Text</option>
+                            }
+                        }
+                    </select>
+                </div>
+
+                <div class="item-campo item-qtd">
+                    <input type="number"
+                           name="Itens[@i].Quantidade"
+                           min="1"
+                           step="1"
+                           class="form-control item-qtd-input"
+                           value="@Model.Itens[i].Quantidade"
+                           placeholder="Qtd" />
+                </div>
+
+                <button type="button"
+                        class="item-remover"
+                        onclick="removerItem(this)"
+                        aria-label="Remover item">
+                    ×
+                </button>
+            </div>
+        }
+
+    </div>
+
+    <p class="itens-vazio @(Model.Itens.Count > 0 ? "hidden" : "")" id="itensVazio">
+        Nenhum item adicionado ainda.
+    </p>
+
+    <button type="button" class="btn-adicionar" onclick="adicionarItem()">
+        + Adicionar item
+    </button>
+</div>
+
+<div class="form-actions">
+    <button type="submit" class="btn-salvar">
+        Salvar
+    </button>
+
+    <a asp-action="Index" class="btn-cancelar">
+        Cancelar
+    </a>
+</div>
+
+<template id="itemTemplate">
+    <div class="item-row">
+        <div class="item-campo">
+            <select name="Itens[0].ProdutoId" class="form-control item-produto">
+                <option value="">Selecione o produto</option>
+
+                @foreach (var p in (IEnumerable<SelectListItem>)ViewBag.Produtos)
+                {
+                    <option value="@p.Value">@p.Text</option>
+                }
+            </select>
+        </div>
+
+        <div class="item-campo item-qtd">
+            <input type="number"
+                   name="Itens[0].Quantidade"
+                   min="1"
+                   step="1"
+                   class="form-control item-qtd-input"
+                   placeholder="Qtd" />
+        </div>
+
+        <button type="button"
+                class="item-remover"
+                onclick="removerItem(this)"
+                aria-label="Remover item">
+            ×
+        </button>
+    </div>
+</template>

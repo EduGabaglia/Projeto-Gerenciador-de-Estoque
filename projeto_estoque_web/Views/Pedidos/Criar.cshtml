@@ -1,0 +1,33 @@
+@model projeto_estoque_web.Models.Pedido
+
+@{
+    ViewData["Title"] = "Novo pedido";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/pedidos.css" asp-append-version="true" />
+}
+
+<div class="pedidos">
+
+    <div class="pedidos-header">
+        <div>
+            <h1>Novo pedido</h1>
+            <p>Preencha os dados para cadastrar um novo pedido</p>
+        </div>
+    </div>
+
+    <form asp-action="Criar" method="post">
+
+        <div class="pedidos-panel">
+            <partial name="_PedidoForm" model="Model" />
+        </div>
+
+    </form>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/pedidos.js" asp-append-version="true"></script>
+}
