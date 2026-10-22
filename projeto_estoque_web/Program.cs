@@ -1,11 +1,13 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Localization;
+using projeto_estoque_web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews(options =>
 {
+    options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true;
     options.ModelBindingMessageProvider.SetValueMustNotBeNullAccessor(field => $"O campo \"{field}\" é obrigatório.");
     options.ModelBindingMessageProvider.SetAttemptedValueIsInvalidAccessor((value, field) => $"O valor \"{value}\" não é válido para \"{field}\".");
     options.ModelBindingMessageProvider.SetMissingBindRequiredValueAccessor(field => $"O campo \"{field}\" é obrigatório.");
@@ -17,6 +19,18 @@ builder.Services.AddControllersWithViews(options =>
     options.ModelBindingMessageProvider.SetUnknownValueIsInvalidAccessor(field => $"O valor informado para \"{field}\" não é válido.");
     options.ModelBindingMessageProvider.SetValueIsInvalidAccessor(field => $"O valor informado para \"{field}\" não é válido.");
     options.ModelBindingMessageProvider.SetValueMustBeANumberAccessor(field => $"O campo \"{field}\" deve ser um número.");
+});
+
+// Cliente HTTP que concentra o acesso ao sistema web à API REST.
+var apiBaseUrl = builder.Configuration["Api:BaseUrl"] ?? "http://localhost:5080";
+
+if (!apiBaseUrl.EndsWith('/'))
+    apiBaseUrl += "/";
+
+builder.Services.AddHttpClient<EstoqueApiClient>(cliente =>
+{
+    cliente.BaseAddress = new Uri(apiBaseUrl);
+    cliente.Timeout = TimeSpan.FromSeconds(60);
 });
 
 var app = builder.Build();

@@ -28,6 +28,13 @@
         </div>
     }
 
+    @if (TempData["Erro"] != null)
+    {
+        <div class="alert-erro">
+            @TempData["Erro"]
+        </div>
+    }
+
     <!-- Cards -->
     <div class="promocoes-cards">
 

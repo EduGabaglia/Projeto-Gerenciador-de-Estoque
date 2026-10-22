@@ -1,0 +1,25 @@
+@projeto_estoque_api_HostAddress = http://localhost:5080
+
+### Health check
+GET {{projeto_estoque_api_HostAddress}}/health
+Accept: application/json
+
+### Produtos (paginado)
+GET {{projeto_estoque_api_HostAddress}}/api/produtos?pagina=1&itensPorPagina=8
+Accept: application/json
+
+### Categorias (opções para selects)
+GET {{projeto_estoque_api_HostAddress}}/api/categorias/opcoes
+Accept: application/json
+
+### Localizações do galpão
+GET {{projeto_estoque_api_HostAddress}}/api/localizacoes
+Accept: application/json
+
+### Dashboard
+GET {{projeto_estoque_api_HostAddress}}/api/dashboard
+Accept: application/json
+
+### Empresa
+GET {{projeto_estoque_api_HostAddress}}/api/configuracoes/empresa
+Accept: application/json

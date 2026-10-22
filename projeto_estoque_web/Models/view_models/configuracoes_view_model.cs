@@ -13,12 +13,13 @@ namespace projeto_estoque_web.Models.view_models
 
         public bool Completo => CamposPreenchidos == TotalCampos;
 
-        public int TotalCampos => 7;
+        public int TotalCampos => 8;
 
         public int CamposPreenchidos => new[]
         {
             Resumo.Nome,
             Resumo.Cnpj,
+            Resumo.Cep,
             Resumo.Endereco,
             Resumo.Cidade,
             Resumo.Uf,

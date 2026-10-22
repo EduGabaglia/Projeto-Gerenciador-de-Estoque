@@ -9,6 +9,7 @@ namespace projeto_estoque_web.Models.view_models
 
         public List<PedidoResumoViewModel> UltimosPedidos { get; set; } = new();
         public List<ProdutoMaisVendidoViewModel> ProdutosMaisVendidos { get; set; } = new();
+        public List<VendaDiaViewModel> VendasUltimos7Dias { get; set; } = new();
 
         public int PromocoesAtivas { get; set; }
         public int ProdutosEmPromocao { get; set; }
@@ -33,6 +34,7 @@ namespace projeto_estoque_web.Models.view_models
         public DateTime Data { get; set; }
         public decimal Valor { get; set; }
         public string Status { get; set; } = string.Empty;
+        public string StatusClasse { get; set; } = "pendente";
         public string Cliente { get; set; } = string.Empty;
         public int QuantidadeItens { get; set; }
     }
@@ -41,5 +43,11 @@ namespace projeto_estoque_web.Models.view_models
     {
         public string Nome { get; set; } = string.Empty;
         public int QuantidadeVendida { get; set; }
+    }
+
+    public class VendaDiaViewModel
+    {
+        public DateTime Data { get; set; }
+        public decimal Valor { get; set; }
     }
 }

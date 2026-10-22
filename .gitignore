@@ -8,3 +8,15 @@ obj/
 *.tmp
 *.tempnode_modules/
 .expo/
+# React Native / Expo
+node_modules/
+.expo/
+dist/
+
+# ASP.NET Core
+bin/
+obj/
+
+# Arquivos locais
+.env
+.vs/

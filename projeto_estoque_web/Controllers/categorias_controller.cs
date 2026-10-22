@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using projeto_estoque_web.Models;
 using projeto_estoque_web.Models.view_models;
+using projeto_estoque_web.Services;
 
 namespace projeto_estoque_web.Controllers
 {
@@ -8,67 +9,30 @@ namespace projeto_estoque_web.Controllers
     {
         private const int ItensPorPagina = 8;
 
-        private static readonly List<Categoria> _categorias = new()
+        private readonly EstoqueApiClient _api;
+
+        public CategoriasController(EstoqueApiClient api) => _api = api;
+
+        public async Task<IActionResult> Index(string? busca, int pagina = 1)
         {
-            new Categoria { Id = 1, Nome = "Alimentos", Descricao = "Produtos alimentícios em geral" },
-            new Categoria { Id = 2, Nome = "Bebidas", Descricao = "Sucos, refrigerantes, água e lácteos" },
-            new Categoria { Id = 3, Nome = "Higiene", Descricao = "Produtos de cuidado pessoal" },
-            new Categoria { Id = 4, Nome = "Limpeza", Descricao = "Produtos de limpeza doméstica" },
-            new Categoria { Id = 5, Nome = "Padaria", Descricao = "Pães, bolos e confeitaria" }
-        };
-
-        private static int _proximoId = _categorias.Count + 1;
-
-        internal static List<Categoria> TodasAsCategorias => _categorias;
-
-        public IActionResult Index(string busca, int pagina = 1)
-        {
-            var lista = _categorias.AsEnumerable();
-
-            if (!string.IsNullOrWhiteSpace(busca))
-            {
-                var termo = busca.Trim().ToLower();
-                lista = lista.Where(c =>
-                    c.Nome.ToLower().Contains(termo) ||
-                    c.Descricao.ToLower().Contains(termo));
-            }
-
-            var ordenadas = lista.OrderBy(c => c.Nome).ToList();
-
-            var totalPaginas = Math.Max(1, (int)Math.Ceiling(ordenadas.Count / (double)ItensPorPagina));
-            pagina = Math.Clamp(pagina, 1, totalPaginas);
-
-            var paginaItens = ordenadas
-                .Skip((pagina - 1) * ItensPorPagina)
-                .Take(ItensPorPagina)
-                .ToList();
-
-            var quantidades = ProdutosController.TodosOsProdutos
-                .GroupBy(p => p.Categoria)
-                .ToDictionary(g => g.Key, g => g.Count());
-
-            var categorias = paginaItens.Select(c => new CategoriaResumoViewModel
-            {
-                Id = c.Id,
-                Nome = c.Nome,
-                Descricao = c.Descricao,
-                QuantidadeProdutos = quantidades.GetValueOrDefault(c.Nome)
-            }).ToList();
-
-            var emUso = _categorias.Count(c => quantidades.ContainsKey(c.Nome));
+            var dados = await _api.ListarCategoriasAsync(busca, pagina, ItensPorPagina);
 
             var model = new CategoriasViewModel
             {
-                TotalCategorias = _categorias.Count,
-                CategoriasEmUso = emUso,
-                CategoriasVazias = _categorias.Count - emUso,
-                MediaProdutosPorCategoria = emUso == 0
-                    ? 0
-                    : Math.Round(ProdutosController.TodosOsProdutos.Count / (decimal)emUso, 1),
-                Categorias = categorias,
+                TotalCategorias = dados.Resumo.TotalCategorias,
+                CategoriasEmUso = dados.Resumo.EmUso,
+                CategoriasVazias = dados.Resumo.Vazias,
+                MediaProdutosPorCategoria = dados.Resumo.MediaProdutosPorCategoriaEmUso,
+                Categorias = dados.Itens.Select(categoria => new CategoriaResumoViewModel
+                {
+                    Id = categoria.Id,
+                    Nome = categoria.Nome,
+                    Descricao = categoria.Descricao,
+                    QuantidadeProdutos = categoria.ProdutosVinculados
+                }).ToList(),
                 Busca = busca ?? string.Empty,
-                PaginaAtual = pagina,
-                TotalPaginas = totalPaginas
+                PaginaAtual = dados.Pagina,
+                TotalPaginas = dados.TotalPaginas
             };
 
             return View(model);
@@ -81,97 +45,114 @@ namespace projeto_estoque_web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Criar(Categoria categoria)
+        public async Task<IActionResult> Criar(Categoria categoria)
         {
-            if (NomeDuplicado(categoria.Nome, null))
-                ModelState.AddModelError(nameof(Categoria.Nome), "Já existe uma categoria com esse nome.");
-
             if (!ModelState.IsValid)
                 return View(categoria);
 
-            categoria.Id = _proximoId++;
-            _categorias.Add(categoria);
+            try
+            {
+                await _api.CriarCategoriaAsync(ParaSalvar(categoria));
 
-            TempData["Mensagem"] = "Categoria cadastrada com sucesso.";
+                TempData["Mensagem"] = "Categoria cadastrada com sucesso.";
 
-            return RedirectToAction(nameof(Index));
+                return RedirectToAction(nameof(Index));
+            }
+            catch (ApiException ex)
+            {
+                AdicionarErro(ex);
+
+                return View(categoria);
+            }
         }
 
-        public IActionResult Editar(int id)
+        public async Task<IActionResult> Editar(int id)
         {
-            var categoria = _categorias.FirstOrDefault(c => c.Id == id);
+            try
+            {
+                var categoria = await _api.ObterCategoriaAsync(id);
 
-            if (categoria is null)
+                return View(new Categoria
+                {
+                    Id = categoria.Id,
+                    Nome = categoria.Nome,
+                    Descricao = categoria.Descricao
+                });
+            }
+            catch (ApiException ex) when (ex.StatusCode == 404)
+            {
                 return NotFound();
-
-            return View(categoria);
+            }
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Editar(int id, Categoria categoria)
+        public async Task<IActionResult> Editar(int id, Categoria categoria)
         {
             if (id != categoria.Id)
                 return NotFound();
 
-            var existente = _categorias.FirstOrDefault(c => c.Id == id);
-
-            if (existente is null)
+            try
+            {
+                await _api.ObterCategoriaAsync(id);
+            }
+            catch (ApiException ex) when (ex.StatusCode == 404)
+            {
                 return NotFound();
-
-            if (NomeDuplicado(categoria.Nome, id))
-                ModelState.AddModelError(nameof(Categoria.Nome), "Já existe uma categoria com esse nome.");
+            }
 
             if (!ModelState.IsValid)
                 return View(categoria);
 
-            var nomeAntigo = existente.Nome;
-
-            existente.Nome = categoria.Nome;
-            existente.Descricao = categoria.Descricao;
-
-            if (!nomeAntigo.Equals(categoria.Nome, StringComparison.OrdinalIgnoreCase))
+            try
             {
-                foreach (var produto in ProdutosController.TodosOsProdutos.Where(p => p.Categoria == nomeAntigo))
-                    produto.Categoria = categoria.Nome;
+                await _api.AtualizarCategoriaAsync(id, ParaSalvar(categoria));
+
+                TempData["Mensagem"] = "Categoria atualizada com sucesso.";
+
+                return RedirectToAction(nameof(Index));
             }
+            catch (ApiException ex)
+            {
+                if (ex.StatusCode == 404)
+                    return NotFound();
 
-            TempData["Mensagem"] = "Categoria atualizada com sucesso.";
+                AdicionarErro(ex);
 
-            return RedirectToAction(nameof(Index));
+                return View(categoria);
+            }
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Excluir(int id)
+        public async Task<IActionResult> Excluir(int id)
         {
-            var categoria = _categorias.FirstOrDefault(c => c.Id == id);
-
-            if (categoria is not null)
+            try
             {
-                var quantidade = ProdutosController.TodosOsProdutos.Count(p => p.Categoria == categoria.Nome);
+                await _api.ExcluirCategoriaAsync(id);
 
-                if (quantidade > 0)
-                {
-                    TempData["Erro"] = $"Não é possível excluir a categoria \"{categoria.Nome}\" pois ela possui {quantidade} produto(s).";
-                    return RedirectToAction(nameof(Index));
-                }
-
-                _categorias.Remove(categoria);
                 TempData["Mensagem"] = "Categoria excluída com sucesso.";
+            }
+            catch (ApiException ex)
+            {
+                TempData["Erro"] = ex.Message;
             }
 
             return RedirectToAction(nameof(Index));
         }
 
-        private static bool NomeDuplicado(string? nome, int? ignorarId)
+        private static CategoriaSalvarApiDto ParaSalvar(Categoria categoria) => new()
         {
-            if (string.IsNullOrWhiteSpace(nome))
-                return false;
+            Nome = categoria.Nome,
+            Descricao = categoria.Descricao
+        };
 
-            return _categorias.Any(c =>
-                c.Id != ignorarId &&
-                c.Nome.Equals(nome.Trim(), StringComparison.OrdinalIgnoreCase));
+        private void AdicionarErro(ApiException ex)
+        {
+            if (ex.StatusCode == 409)
+                ModelState.AddModelError(nameof(Categoria.Nome), ex.Message);
+            else
+                ModelState.AddModelError(string.Empty, ex.Message);
         }
     }
 }

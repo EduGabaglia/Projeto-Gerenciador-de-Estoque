@@ -7,7 +7,7 @@ namespace projeto_estoque_web.Models
         public int Id { get; set; }
 
         [Required(ErrorMessage = "Informe o nome da promoção.")]
-        [StringLength(80, ErrorMessage = "O nome deve ter no máximo 80 caracteres.")]
+        [StringLength(150, ErrorMessage = "O nome deve ter no máximo 150 caracteres.")]
         public string Nome { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Informe o percentual de desconto.")]

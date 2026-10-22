@@ -28,6 +28,13 @@
         </div>
     }
 
+    @if (TempData["Erro"] != null)
+    {
+        <div class="alert-erro">
+            @TempData["Erro"]
+        </div>
+    }
+
     <!-- Cards -->
     <div class="produtos-cards">
 
@@ -134,7 +141,7 @@
                                 </td>
 
                                 <td>
-                                    @produto.Categoria
+                                    @produto.CategoriaNome
                                 </td>
 
                                 <td>

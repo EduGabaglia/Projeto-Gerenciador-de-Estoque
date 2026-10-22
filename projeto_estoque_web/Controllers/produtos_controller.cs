@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc.Rendering;
 using projeto_estoque_web.Models;
 using projeto_estoque_web.Models.view_models;
+using projeto_estoque_web.Services;
 
 namespace projeto_estoque_web.Controllers
 {
@@ -9,159 +10,178 @@ namespace projeto_estoque_web.Controllers
     {
         private const int ItensPorPagina = 8;
 
-        private static readonly List<Produto> _produtos = new()
+        private readonly EstoqueApiClient _api;
+
+        public ProdutosController(EstoqueApiClient api) => _api = api;
+
+        public async Task<IActionResult> Index(string? busca, int pagina = 1)
         {
-            new Produto { Id = 1, Nome = "Arroz 5kg", Categoria = "Alimentos", Preco = 24.90m, Quantidade = 42, Localizacao = "Corredor 1 - Prateleira A" },
-            new Produto { Id = 2, Nome = "Feijão 1kg", Categoria = "Alimentos", Preco = 9.80m, Quantidade = 30, Localizacao = "Corredor 1 - Prateleira B" },
-            new Produto { Id = 3, Nome = "Óleo de cozinha 900ml", Categoria = "Alimentos", Preco = 8.50m, Quantidade = 12, Localizacao = "Corredor 1 - Prateleira C" },
-            new Produto { Id = 4, Nome = "Açúcar 1kg", Categoria = "Alimentos", Preco = 5.20m, Quantidade = 25, Localizacao = "Corredor 1 - Prateleira B" },
-            new Produto { Id = 5, Nome = "Café torrado 500g", Categoria = "Alimentos", Preco = 14.90m, Quantidade = 6, Localizacao = "Corredor 2 - Prateleira A" },
-            new Produto { Id = 6, Nome = "Leite integral 1L", Categoria = "Bebidas", Preco = 4.50m, Quantidade = 3, Localizacao = "Corredor 3 - Prateleira B" },
-            new Produto { Id = 7, Nome = "Suco de laranja 1L", Categoria = "Bebidas", Preco = 7.90m, Quantidade = 18, Localizacao = "Corredor 3 - Prateleira C" },
-            new Produto { Id = 8, Nome = "Refrigerante 2L", Categoria = "Bebidas", Preco = 9.90m, Quantidade = 0, Localizacao = "Corredor 3 - Prateleira D" },
-            new Produto { Id = 9, Nome = "Água mineral 500ml", Categoria = "Bebidas", Preco = 1.80m, Quantidade = 60, Localizacao = "Corredor 3 - Prateleira A" },
-            new Produto { Id = 10, Nome = "Sabonete", Categoria = "Higiene", Preco = 2.90m, Quantidade = 100, Localizacao = "Corredor 5 - Prateleira A" },
-            new Produto { Id = 11, Nome = "Shampoo 400ml", Categoria = "Higiene", Preco = 18.90m, Quantidade = 22, Localizacao = "Corredor 5 - Prateleira B" },
-            new Produto { Id = 12, Nome = "Detergente 500ml", Categoria = "Limpeza", Preco = 3.40m, Quantidade = 5, Localizacao = "Corredor 4 - Prateleira A" },
-            new Produto { Id = 13, Nome = "Álcool 1L", Categoria = "Limpeza", Preco = 6.90m, Quantidade = 4, Localizacao = "Corredor 4 - Prateleira B" },
-            new Produto { Id = 14, Nome = "Pão de forma", Categoria = "Padaria", Preco = 8.90m, Quantidade = 15, Localizacao = "Corredor 2 - Prateleira B" }
-        };
-
-        private static int _proximoId = _produtos.Count + 1;
-
-        internal static List<Produto> TodosOsProdutos => _produtos;
-
-        public IActionResult Index(string busca, int pagina = 1)
-        {
-            var lista = _produtos.AsEnumerable();
-
-            if (!string.IsNullOrWhiteSpace(busca))
-            {
-                var termo = busca.Trim().ToLower();
-                lista = lista.Where(p =>
-                    p.Nome.ToLower().Contains(termo) ||
-                    p.Categoria.ToLower().Contains(termo));
-            }
-
-            var ordenados = lista.OrderBy(p => p.Nome).ToList();
-
-            var totalPaginas = Math.Max(1, (int)Math.Ceiling(ordenados.Count / (double)ItensPorPagina));
-            pagina = Math.Clamp(pagina, 1, totalPaginas);
-
-            var paginaItens = ordenados
-                .Skip((pagina - 1) * ItensPorPagina)
-                .Take(ItensPorPagina)
-                .ToList();
+            var dados = await _api.ListarProdutosAsync(busca, pagina, ItensPorPagina);
 
             var model = new ProdutosViewModel
             {
-                TotalProdutos = _produtos.Count,
-                EstoqueBaixo = _produtos.Count(p => p.Quantidade <= 5),
-                CategoriasCadastradas = _produtos.Select(p => p.Categoria).Distinct().Count(),
-                ValorTotalEstoque = _produtos.Sum(p => p.Preco * p.Quantidade),
-                Produtos = paginaItens,
+                TotalProdutos = dados.Resumo.TotalProdutos,
+                EstoqueBaixo = dados.Resumo.EstoqueBaixo,
+                CategoriasCadastradas = dados.Resumo.CategoriasDistintas,
+                ValorTotalEstoque = dados.Resumo.ValorTotalEstoque,
+                Produtos = dados.Itens.Select(MapearProduto).ToList(),
                 Busca = busca ?? string.Empty,
-                PaginaAtual = pagina,
-                TotalPaginas = totalPaginas
+                PaginaAtual = dados.Pagina,
+                TotalPaginas = dados.TotalPaginas
             };
 
             return View(model);
         }
 
-        public IActionResult Criar(string retorno)
+        public async Task<IActionResult> Criar(string? retorno)
         {
-            ViewBag.Categorias = ListaCategorias();
+            await CarregarListasAsync();
+
             ViewBag.Retorno = retorno;
+
             return View(new Produto());
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Criar(Produto produto, string retorno)
+        public async Task<IActionResult> Criar(Produto produto, string? retorno)
         {
-            ViewBag.Categorias = ListaCategorias(produto.Categoria);
+            await CarregarListasAsync(produto.CategoriaId, produto.LocalizacaoId);
+
             ViewBag.Retorno = retorno;
 
             if (!ModelState.IsValid)
                 return View(produto);
 
-            produto.Id = _proximoId++;
-            _produtos.Add(produto);
+            try
+            {
+                await _api.CriarProdutoAsync(ParaSalvar(produto));
 
-            TempData["Mensagem"] = "Produto cadastrado com sucesso.";
+                TempData["Mensagem"] = "Produto cadastrado com sucesso.";
 
-            return RedirectToOrigin(retorno);
+                return RedirectToOrigin(retorno);
+            }
+            catch (ApiException ex)
+            {
+                ModelState.AddModelError(string.Empty, ex.Message);
+
+                return View(produto);
+            }
         }
 
-        public IActionResult Editar(int id, string retorno)
+        public async Task<IActionResult> Editar(int id, string? retorno)
         {
-            var produto = _produtos.FirstOrDefault(p => p.Id == id);
+            try
+            {
+                var produto = MapearProduto(await _api.ObterProdutoAsync(id));
 
-            if (produto is null)
+                await CarregarListasAsync(produto.CategoriaId, produto.LocalizacaoId);
+
+                ViewBag.Retorno = retorno;
+
+                return View(produto);
+            }
+            catch (ApiException ex) when (ex.StatusCode == 404)
+            {
                 return NotFound();
-
-            ViewBag.Categorias = ListaCategorias(produto.Categoria);
-            ViewBag.Retorno = retorno;
-
-            return View(produto);
+            }
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Editar(int id, Produto produto, string retorno)
+        public async Task<IActionResult> Editar(int id, Produto produto, string? retorno)
         {
             if (id != produto.Id)
                 return NotFound();
 
-            var existente = _produtos.FirstOrDefault(p => p.Id == id);
-
-            if (existente is null)
+            try
+            {
+                await _api.ObterProdutoAsync(id);
+            }
+            catch (ApiException ex) when (ex.StatusCode == 404)
+            {
                 return NotFound();
+            }
 
-            ViewBag.Categorias = ListaCategorias(produto.Categoria);
+            await CarregarListasAsync(produto.CategoriaId, produto.LocalizacaoId);
+
             ViewBag.Retorno = retorno;
 
             if (!ModelState.IsValid)
                 return View(produto);
 
-            existente.Nome = produto.Nome;
-            existente.Categoria = produto.Categoria;
-                        existente.Preco = produto.Preco;
-            existente.Quantidade = produto.Quantidade;
-            existente.Localizacao = produto.Localizacao;
+            try
+            {
+                await _api.AtualizarProdutoAsync(id, ParaSalvar(produto));
 
-            TempData["Mensagem"] = "Produto atualizado com sucesso.";
+                TempData["Mensagem"] = "Produto atualizado com sucesso.";
 
-            return RedirectToOrigin(retorno);
+                return RedirectToOrigin(retorno);
+            }
+            catch (ApiException ex)
+            {
+                if (ex.StatusCode == 404)
+                    return NotFound();
+
+                ModelState.AddModelError(string.Empty, ex.Message);
+
+                return View(produto);
+            }
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Excluir(int id)
+        public async Task<IActionResult> Excluir(int id)
         {
-            var produto = _produtos.FirstOrDefault(p => p.Id == id);
-
-            if (produto is not null)
+            try
             {
-                _produtos.Remove(produto);
+                await _api.ExcluirProdutoAsync(id);
+
                 TempData["Mensagem"] = "Produto excluído com sucesso.";
+            }
+            catch (ApiException ex)
+            {
+                TempData["Erro"] = ex.Message;
             }
 
             return RedirectToAction(nameof(Index));
         }
 
-        private static SelectList ListaCategorias(string? selecionada = null)
-            => new SelectList(
-                CategoriasController.TodasAsCategorias.Select(c => c.Nome).ToList(),
-                selecionada);
+        private async Task CarregarListasAsync(int? categoriaId = null, int? localizacaoId = null)
+        {
+            var categorias = await _api.ListarOpcoesCategoriaAsync();
+            var localizacoes = await _api.ListarLocalizacoesAsync();
 
-        private static IActionResult RedirectToOrigin(string? retorno)
+            ViewBag.Categorias = new SelectList(categorias, "Id", "Nome", categoriaId);
+            ViewBag.Localizacoes = new SelectList(localizacoes, "Id", "Nome", localizacaoId);
+        }
+
+        private static Produto MapearProduto(ProdutoApiDto produto) => new()
+        {
+            Id = produto.Id,
+            Nome = produto.Nome,
+            CategoriaId = produto.CategoriaId,
+            CategoriaNome = produto.CategoriaNome,
+            Descricao = produto.Descricao ?? string.Empty,
+            Preco = produto.Preco,
+            Quantidade = produto.Quantidade,
+            LocalizacaoId = produto.LocalizacaoId,
+            Localizacao = produto.Localizacao ?? string.Empty
+        };
+
+        private static ProdutoSalvarApiDto ParaSalvar(Produto produto) => new()
+        {
+            Nome = produto.Nome,
+            CategoriaId = produto.CategoriaId,
+            Descricao = produto.Descricao,
+            Preco = produto.Preco,
+            Quantidade = produto.Quantidade,
+            LocalizacaoId = produto.LocalizacaoId
+        };
+
+        private IActionResult RedirectToOrigin(string? retorno)
             => retorno == "estoque"
-                ? new RedirectToActionResult(nameof(EstoqueController.Index), nameof(EstoqueController).Replace("Controller", ""), null)
-                : new RedirectToActionResult(nameof(Index), null, null);
+                ? RedirectToAction(nameof(EstoqueController.Index), "Estoque")
+                : RedirectToAction(nameof(Index));
     }
 }
-
-
-
-

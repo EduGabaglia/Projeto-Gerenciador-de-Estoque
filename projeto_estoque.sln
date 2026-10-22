@@ -5,6 +5,10 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "projeto_estoque_web", "projeto_estoque_web\projeto_estoque_web.csproj", "{44716504-A590-4537-AC06-C7978647D6E4}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "APIs", "APIs", "{A493B712-D036-515A-2346-D66A3A2D9736}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "projeto_estoque_api", "APIs\projeto_estoque_api\projeto_estoque_api.csproj", "{A5E0BEB5-890A-4C1C-9212-AD15B7C88DAF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,8 +31,23 @@ Global
 		{44716504-A590-4537-AC06-C7978647D6E4}.Release|x64.Build.0 = Release|Any CPU
 		{44716504-A590-4537-AC06-C7978647D6E4}.Release|x86.ActiveCfg = Release|Any CPU
 		{44716504-A590-4537-AC06-C7978647D6E4}.Release|x86.Build.0 = Release|Any CPU
+		{A5E0BEB5-890A-4C1C-9212-AD15B7C88DAF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A5E0BEB5-890A-4C1C-9212-AD15B7C88DAF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A5E0BEB5-890A-4C1C-9212-AD15B7C88DAF}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A5E0BEB5-890A-4C1C-9212-AD15B7C88DAF}.Debug|x64.Build.0 = Debug|Any CPU
+		{A5E0BEB5-890A-4C1C-9212-AD15B7C88DAF}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A5E0BEB5-890A-4C1C-9212-AD15B7C88DAF}.Debug|x86.Build.0 = Debug|Any CPU
+		{A5E0BEB5-890A-4C1C-9212-AD15B7C88DAF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A5E0BEB5-890A-4C1C-9212-AD15B7C88DAF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A5E0BEB5-890A-4C1C-9212-AD15B7C88DAF}.Release|x64.ActiveCfg = Release|Any CPU
+		{A5E0BEB5-890A-4C1C-9212-AD15B7C88DAF}.Release|x64.Build.0 = Release|Any CPU
+		{A5E0BEB5-890A-4C1C-9212-AD15B7C88DAF}.Release|x86.ActiveCfg = Release|Any CPU
+		{A5E0BEB5-890A-4C1C-9212-AD15B7C88DAF}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{A5E0BEB5-890A-4C1C-9212-AD15B7C88DAF} = {A493B712-D036-515A-2346-D66A3A2D9736}
 	EndGlobalSection
 EndGlobal

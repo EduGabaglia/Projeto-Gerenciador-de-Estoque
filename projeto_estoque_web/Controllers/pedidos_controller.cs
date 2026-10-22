@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using projeto_estoque_web.Models;
 using projeto_estoque_web.Models.view_models;
+using projeto_estoque_web.Services;
 
 namespace projeto_estoque_web.Controllers
 {
@@ -11,140 +12,38 @@ namespace projeto_estoque_web.Controllers
 
         public static readonly string[] StatusDisponiveis =
         {
-            "Pendente", "Preparando", "Entregue", "Cancelado"
+            "Pendente", "Pago", "Preparando", "Enviado", "Entregue", "Cancelado"
         };
 
-        private static readonly List<Pedido> _pedidos = new()
-        {
-            new Pedido
-            {
-                Id = 1006,
-                Cliente = "João Souza",
-                Data = DateTime.Now,
-                Status = "Pendente",
-                Itens = new List<PedidoItem>
-                {
-                    new PedidoItem { ProdutoId = 1, NomeProduto = "Arroz 5kg", Quantidade = 2, PrecoUnitario = 24.90m },
-                    new PedidoItem { ProdutoId = 6, NomeProduto = "Leite integral 1L", Quantidade = 2, PrecoUnitario = 4.50m },
-                    new PedidoItem { ProdutoId = 10, NomeProduto = "Sabonete", Quantidade = 3, PrecoUnitario = 2.90m }
-                }
-            },
-            new Pedido
-            {
-                Id = 1005,
-                Cliente = "Maria Silva",
-                Data = DateTime.Now.AddDays(-1),
-                Status = "Preparando",
-                Itens = new List<PedidoItem>
-                {
-                    new PedidoItem { ProdutoId = 5, NomeProduto = "Café torrado 500g", Quantidade = 1, PrecoUnitario = 14.90m },
-                    new PedidoItem { ProdutoId = 4, NomeProduto = "Açúcar 1kg", Quantidade = 2, PrecoUnitario = 5.20m }
-                }
-            },
-            new Pedido
-            {
-                Id = 1004,
-                Cliente = "Ana Costa",
-                Data = DateTime.Now.AddDays(-2),
-                Status = "Entregue",
-                Itens = new List<PedidoItem>
-                {
-                    new PedidoItem { ProdutoId = 12, NomeProduto = "Detergente 500ml", Quantidade = 2, PrecoUnitario = 3.40m },
-                    new PedidoItem { ProdutoId = 13, NomeProduto = "Álcool 1L", Quantidade = 1, PrecoUnitario = 6.90m }
-                }
-            },
-            new Pedido
-            {
-                Id = 1003,
-                Cliente = "Pedro Lima",
-                Data = DateTime.Now.AddDays(-3),
-                Status = "Cancelado",
-                Itens = new List<PedidoItem>
-                {
-                    new PedidoItem { ProdutoId = 8, NomeProduto = "Refrigerante 2L", Quantidade = 4, PrecoUnitario = 9.90m }
-                }
-            },
-            new Pedido
-            {
-                Id = 1002,
-                Cliente = "Fernanda Dias",
-                Data = DateTime.Now.AddDays(-4),
-                Status = "Entregue",
-                Itens = new List<PedidoItem>
-                {
-                    new PedidoItem { ProdutoId = 11, NomeProduto = "Shampoo 400ml", Quantidade = 1, PrecoUnitario = 18.90m },
-                    new PedidoItem { ProdutoId = 14, NomeProduto = "Pão de forma", Quantidade = 2, PrecoUnitario = 8.90m }
-                }
-            },
-            new Pedido
-            {
-                Id = 1001,
-                Cliente = "Loja Central",
-                Data = DateTime.Now.AddDays(-5),
-                Status = "Entregue",
-                Itens = new List<PedidoItem>
-                {
-                    new PedidoItem { ProdutoId = 3, NomeProduto = "Óleo de cozinha 900ml", Quantidade = 2, PrecoUnitario = 8.50m },
-                    new PedidoItem { ProdutoId = 9, NomeProduto = "Água mineral 500ml", Quantidade = 6, PrecoUnitario = 1.80m }
-                }
-            }
-        };
+        private readonly EstoqueApiClient _api;
 
-        private static int _proximoId = 1007;
+        public PedidosController(EstoqueApiClient api) => _api = api;
 
-        internal static List<Pedido> TodosOsPedidos => _pedidos;
-
-        public IActionResult Index(string busca, int pagina = 1)
+        public async Task<IActionResult> Index(string? busca, int pagina = 1)
         {
             ViewBag.StatusDisponiveis = StatusDisponiveis;
 
-            var lista = _pedidos.AsEnumerable();
-
-            if (!string.IsNullOrWhiteSpace(busca))
-            {
-                var termo = busca.Trim().ToLower();
-                var codigo = int.TryParse(termo, out var c) ? c : 0;
-
-                lista = lista.Where(p =>
-                    p.Cliente.ToLower().Contains(termo) ||
-                    p.Id == codigo);
-            }
-
-            var ordenados = lista
-                .OrderByDescending(p => p.Data)
-                .ThenByDescending(p => p.Id)
-                .ToList();
-
-            var totalPaginas = Math.Max(1, (int)Math.Ceiling(ordenados.Count / (double)ItensPorPagina));
-            pagina = Math.Clamp(pagina, 1, totalPaginas);
-
-            var paginaItens = ordenados
-                .Skip((pagina - 1) * ItensPorPagina)
-                .Take(ItensPorPagina)
-                .ToList();
-
-            var resumo = paginaItens.Select(p => new PedidoResumoViewModel
-            {
-                Id = p.Id,
-                Data = p.Data,
-                Valor = p.ValorTotal,
-                Status = p.Status,
-                Cliente = p.Cliente,
-                QuantidadeItens = p.TotalItens
-            }).ToList();
-
-            var ativos = _pedidos.Where(p => p.Status != "Cancelado").ToList();
+            var dados = await _api.ListarPedidosAsync(busca, pagina, ItensPorPagina);
 
             var model = new PedidosViewModel
             {
-                TotalPedidos = _pedidos.Count,
-                PedidosPendentes = _pedidos.Count(p => p.Status == "Pendente"),
-                PedidosEntregues = _pedidos.Count(p => p.Status == "Entregue"),
-                ReceitaTotal = ativos.Sum(p => p.ValorTotal),
-                Pedidos = resumo,
+                TotalPedidos = dados.Resumo.TotalPedidos,
+                PedidosPendentes = dados.Resumo.Pendentes,
+                PedidosEntregues = dados.Resumo.Entregues,
+                ReceitaTotal = dados.Resumo.ReceitaTotal,
+                Pedidos = dados.Itens.Select(pedido => new PedidoResumoViewModel
+                {
+                    Id = pedido.Id,
+                    Data = pedido.Data,
+                    Valor = pedido.ValorTotal,
+                    Status = pedido.StatusLabel,
+                    StatusClasse = pedido.StatusClasse,
+                    Cliente = pedido.Cliente,
+                    QuantidadeItens = pedido.TotalItens
+                }).ToList(),
                 Busca = busca ?? string.Empty,
-                PaginaAtual = pagina,
-                TotalPaginas = totalPaginas
+                PaginaAtual = dados.Pagina,
+                TotalPaginas = dados.TotalPaginas
             };
 
             return View(model);
@@ -152,7 +51,7 @@ namespace projeto_estoque_web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult AtualizarStatus(int id, string? status, string? busca, int pagina = 1)
+        public async Task<IActionResult> AtualizarStatus(int id, string? status, string? busca, int pagina = 1)
         {
             if (!StatusDisponiveis.Contains(status, StringComparer.OrdinalIgnoreCase))
             {
@@ -160,62 +59,27 @@ namespace projeto_estoque_web.Controllers
                 return RedirectToAction(nameof(Index), new { busca, pagina });
             }
 
-            var pedido = _pedidos.FirstOrDefault(p => p.Id == id);
+            var novoStatus = StatusDisponiveis.First(
+                s => s.Equals(status, StringComparison.OrdinalIgnoreCase));
 
-            if (pedido is null)
+            try
             {
-                TempData["Erro"] = "Pedido não encontrado.";
-                return RedirectToAction(nameof(Index), new { busca, pagina });
+                var pedido = await _api.AlterarStatusPedidoAsync(id, novoStatus);
+
+                TempData["Mensagem"] = $"Pedido #{pedido.Id} atualizado para \"{pedido.StatusLabel}\".";
             }
-
-            var novoStatus = StatusDisponiveis.First(s => s.Equals(status, StringComparison.OrdinalIgnoreCase));
-
-            if (pedido.Status == novoStatus)
-                return RedirectToAction(nameof(Index), new { busca, pagina });
-
-            if (novoStatus == "Cancelado")
+            catch (ApiException ex)
             {
-                if (pedido.Status != "Cancelado")
-                {
-                    foreach (var item in pedido.Itens)
-                    {
-                        var produto = ProdutosController.TodosOsProdutos.FirstOrDefault(p => p.Id == item.ProdutoId);
-
-                        if (produto is not null)
-                            produto.Quantidade += item.Quantidade;
-                    }
-                }
+                TempData["Erro"] = ex.Message;
             }
-            else if (pedido.Status == "Cancelado")
-            {
-                foreach (var item in pedido.Itens)
-                {
-                    var produto = ProdutosController.TodosOsProdutos.FirstOrDefault(p => p.Id == item.ProdutoId);
-
-                    if (produto is not null && item.Quantidade > produto.Quantidade)
-                    {
-                        TempData["Erro"] = $"Estoque insuficiente para \"{item.NomeProduto}\" ({produto.Quantidade} disponíveis). Status não alterado.";
-                        return RedirectToAction(nameof(Index), new { busca, pagina });
-                    }
-                }
-
-                foreach (var item in pedido.Itens)
-                {
-                    var produto = ProdutosController.TodosOsProdutos.First(p => p.Id == item.ProdutoId);
-                    produto.Quantidade -= item.Quantidade;
-                }
-            }
-
-            pedido.Status = novoStatus;
-
-            TempData["Mensagem"] = $"Pedido #{pedido.Id} atualizado para \"{novoStatus}\".";
 
             return RedirectToAction(nameof(Index), new { busca, pagina });
         }
 
-        public IActionResult Criar()
+        public async Task<IActionResult> Criar()
         {
-            ViewBag.Produtos = ListaProdutos();
+            await CarregarListasAsync();
+
             ViewBag.StatusList = ListaStatus("Pendente");
 
             return View(new Pedido { Data = DateTime.Now });
@@ -223,9 +87,10 @@ namespace projeto_estoque_web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Criar(Pedido pedido)
+        public async Task<IActionResult> Criar(Pedido pedido)
         {
-            ViewBag.Produtos = ListaProdutos();
+            await CarregarListasAsync();
+
             ViewBag.StatusList = ListaStatus(pedido.Status);
 
             NormalizarStatus(pedido);
@@ -241,76 +106,58 @@ namespace projeto_estoque_web.Controllers
                 return View(pedido);
             }
 
-            var quantidadePorProduto = pedido.Itens.ToDictionary(i => i.ProdutoId, i => i.Quantidade);
-
-            if (pedido.Status != "Cancelado")
+            try
             {
-                foreach (var par in quantidadePorProduto)
-                {
-                    var produto = ProdutosController.TodosOsProdutos.FirstOrDefault(p => p.Id == par.Key);
+                var criado = await _api.CriarPedidoAsync(ParaSalvar(pedido));
 
-                    if (produto is null)
-                    {
-                        ModelState.AddModelError(string.Empty, "Um dos itens refere-se a um produto inexistente.");
-                        return View(pedido);
-                    }
+                TempData["Mensagem"] = $"Pedido #{criado.Id} cadastrado com sucesso.";
 
-                    if (par.Value > produto.Quantidade)
-                    {
-                        ModelState.AddModelError(string.Empty, $"Estoque insuficiente para \"{produto.Nome}\" ({produto.Quantidade} disponíveis).");
-                        return View(pedido);
-                    }
-                }
+                return RedirectToAction(nameof(Index));
             }
-
-            foreach (var item in pedido.Itens)
+            catch (ApiException ex)
             {
-                var produto = ProdutosController.TodosOsProdutos.FirstOrDefault(p => p.Id == item.ProdutoId);
+                ModelState.AddModelError(string.Empty, ex.Message);
 
-                if (produto is not null)
-                {
-                    item.NomeProduto = produto.Nome;
-                    item.PrecoUnitario = produto.Preco;
-
-                    if (pedido.Status != "Cancelado")
-                        produto.Quantidade -= item.Quantidade;
-                }
+                return View(pedido);
             }
-
-            pedido.Id = _proximoId++;
-            _pedidos.Insert(0, pedido);
-
-            TempData["Mensagem"] = $"Pedido #{pedido.Id} cadastrado com sucesso.";
-
-            return RedirectToAction(nameof(Index));
         }
 
-        public IActionResult Editar(int id)
+        public async Task<IActionResult> Editar(int id)
         {
-            var pedido = _pedidos.FirstOrDefault(p => p.Id == id);
+            try
+            {
+                var pedido = MapearPedido(await _api.ObterPedidoAsync(id));
 
-            if (pedido is null)
+                await CarregarListasAsync();
+
+                ViewBag.StatusList = ListaStatus(pedido.Status);
+
+                return View(pedido);
+            }
+            catch (ApiException ex) when (ex.StatusCode == 404)
+            {
                 return NotFound();
-
-            ViewBag.Produtos = ListaProdutos();
-            ViewBag.StatusList = ListaStatus(pedido.Status);
-
-            return View(pedido);
+            }
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Editar(int id, Pedido pedido)
+        public async Task<IActionResult> Editar(int id, Pedido pedido)
         {
             if (id != pedido.Id)
                 return NotFound();
 
-            var existente = _pedidos.FirstOrDefault(p => p.Id == id);
-
-            if (existente is null)
+            try
+            {
+                await _api.ObterPedidoAsync(id);
+            }
+            catch (ApiException ex) when (ex.StatusCode == 404)
+            {
                 return NotFound();
+            }
 
-            ViewBag.Produtos = ListaProdutos();
+            await CarregarListasAsync();
+
             ViewBag.StatusList = ListaStatus(pedido.Status);
 
             NormalizarStatus(pedido);
@@ -326,109 +173,82 @@ namespace projeto_estoque_web.Controllers
                 return View(pedido);
             }
 
-            var novoCancelado = pedido.Status == "Cancelado";
-
-            if (!novoCancelado)
+            try
             {
-                var quantidadePorProduto = pedido.Itens.ToDictionary(i => i.ProdutoId, i => i.Quantidade);
+                await _api.AtualizarPedidoAsync(id, ParaSalvar(pedido));
 
-                foreach (var par in quantidadePorProduto)
-                {
-                    var produto = ProdutosController.TodosOsProdutos.FirstOrDefault(p => p.Id == par.Key);
+                TempData["Mensagem"] = $"Pedido #{id} atualizado com sucesso.";
 
-                    if (produto is null)
-                    {
-                        ModelState.AddModelError(string.Empty, "Um dos itens refere-se a um produto inexistente.");
-                        return View(pedido);
-                    }
-
-                    var disponivel = produto.Quantidade;
-
-                    if (existente.Status != "Cancelado")
-                    {
-                        disponivel += existente.Itens
-                            .Where(i => i.ProdutoId == par.Key)
-                            .Sum(i => i.Quantidade);
-                    }
-
-                    if (par.Value > disponivel)
-                    {
-                        ModelState.AddModelError(string.Empty, $"Estoque insuficiente para \"{produto.Nome}\" ({disponivel} disponíveis).");
-                        return View(pedido);
-                    }
-                }
+                return RedirectToAction(nameof(Index));
             }
-
-            if (existente.Status != "Cancelado")
+            catch (ApiException ex)
             {
-                foreach (var item in existente.Itens)
-                {
-                    var produto = ProdutosController.TodosOsProdutos.FirstOrDefault(p => p.Id == item.ProdutoId);
+                if (ex.StatusCode == 404)
+                    return NotFound();
 
-                    if (produto is not null)
-                        produto.Quantidade += item.Quantidade;
-                }
+                ModelState.AddModelError(string.Empty, ex.Message);
+
+                return View(pedido);
             }
-
-            if (!novoCancelado)
-            {
-                foreach (var item in pedido.Itens)
-                {
-                    var produto = ProdutosController.TodosOsProdutos.First(p => p.Id == item.ProdutoId);
-                    item.NomeProduto = produto.Nome;
-                    item.PrecoUnitario = produto.Preco;
-                    produto.Quantidade -= item.Quantidade;
-                }
-            }
-            else
-            {
-                foreach (var item in pedido.Itens)
-                {
-                    var produto = ProdutosController.TodosOsProdutos.FirstOrDefault(p => p.Id == item.ProdutoId);
-
-                    if (produto is not null)
-                    {
-                        item.NomeProduto = produto.Nome;
-                        item.PrecoUnitario = produto.Preco;
-                    }
-                }
-            }
-
-            existente.Cliente = pedido.Cliente;
-            existente.Data = pedido.Data;
-            existente.Status = pedido.Status;
-            existente.Itens = pedido.Itens;
-
-            TempData["Mensagem"] = $"Pedido #{existente.Id} atualizado com sucesso.";
-
-            return RedirectToAction(nameof(Index));
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Excluir(int id)
+        public async Task<IActionResult> Excluir(int id)
         {
-            var pedido = _pedidos.FirstOrDefault(p => p.Id == id);
-
-            if (pedido is not null)
+            try
             {
-                if (pedido.Status != "Cancelado")
-                {
-                    foreach (var item in pedido.Itens)
-                    {
-                        var produto = ProdutosController.TodosOsProdutos.FirstOrDefault(p => p.Id == item.ProdutoId);
+                await _api.ExcluirPedidoAsync(id);
 
-                        if (produto is not null)
-                            produto.Quantidade += item.Quantidade;
-                    }
-                }
-
-                _pedidos.Remove(pedido);
-                TempData["Mensagem"] = $"Pedido #{pedido.Id} excluído com sucesso.";
+                TempData["Mensagem"] = $"Pedido #{id} excluído com sucesso.";
+            }
+            catch (ApiException ex)
+            {
+                TempData["Erro"] = ex.Message;
             }
 
             return RedirectToAction(nameof(Index));
         }
+
+        private async Task CarregarListasAsync()
+        {
+            var produtos = await _api.TodosProdutosAsync();
+
+            ViewBag.Produtos = produtos
+                .OrderBy(p => p.Nome)
+                .Select(p => new SelectListItem($"{p.Nome} — {p.Preco.ToString("C")}", p.Id.ToString()))
+                .ToList();
+        }
+
+        private static SelectList ListaStatus(string? selecionado)
+            => new(StatusDisponiveis, selecionado);
+
+        private static Pedido MapearPedido(PedidoApiDto pedido) => new()
+        {
+            Id = pedido.Id,
+            Cliente = pedido.Cliente,
+            Data = pedido.Data,
+            Status = pedido.StatusLabel,
+            Itens = pedido.Itens.Select(item => new PedidoItem
+            {
+                ProdutoId = item.ProdutoId,
+                NomeProduto = item.NomeProduto,
+                Quantidade = item.Quantidade,
+                PrecoUnitario = item.PrecoUnitario
+            }).ToList()
+        };
+
+        private static PedidoSalvarApiDto ParaSalvar(Pedido pedido) => new()
+        {
+            Cliente = pedido.Cliente,
+            Data = pedido.Data,
+            Status = pedido.Status,
+            Itens = pedido.Itens.Select(item => new ItemPedidoSalvarApiDto
+            {
+                ProdutoId = item.ProdutoId,
+                Quantidade = item.Quantidade
+            }).ToList()
+        };
 
         private static void NormalizarItens(Pedido pedido)
         {
@@ -458,19 +278,5 @@ namespace projeto_estoque_web.Controllers
                 ModelState.Remove(key);
             }
         }
-
-        private static SelectList ListaProdutos()
-        {
-            var produtos = ProdutosController.TodosOsProdutos
-                .OrderBy(p => p.Nome)
-                .ToDictionary(
-                    p => p.Id.ToString(),
-                    p => $"{p.Nome} — {p.Preco.ToString("C")}");
-
-            return new SelectList(produtos, "Key", "Value");
-        }
-
-        private static SelectList ListaStatus(string selecionado)
-            => new SelectList(StatusDisponiveis, selecionado);
     }
 }

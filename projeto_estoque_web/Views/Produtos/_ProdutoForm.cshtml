@@ -15,11 +15,17 @@
 </div>
 
 <div class="form-group">
-    <label asp-for="Categoria"></label>
-    <select asp-for="Categoria" asp-items="@(ViewBag.Categorias as SelectList)" class="form-control">
+    <label asp-for="Descricao"></label>
+    <textarea asp-for="Descricao" class="form-control" rows="2" placeholder="Descrição opcional do produto"></textarea>
+    <span asp-validation-for="Descricao" class="text-danger"></span>
+</div>
+
+<div class="form-group">
+    <label asp-for="CategoriaId"></label>
+    <select asp-for="CategoriaId" asp-items="@(ViewBag.Categorias as SelectList)" class="form-control">
         <option value="">Selecione uma categoria</option>
     </select>
-    <span asp-validation-for="Categoria" class="text-danger"></span>
+    <span asp-validation-for="CategoriaId" class="text-danger"></span>
 </div>
 
 <div class="form-row">
@@ -37,9 +43,11 @@
 </div>
 
 <div class="form-group">
-    <label asp-for="Localizacao"></label>
-    <input asp-for="Localizacao" class="form-control" placeholder="Ex: Corredor 3, Prateleira B" />
-    <span asp-validation-for="Localizacao" class="text-danger"></span>
+    <label asp-for="LocalizacaoId"></label>
+    <select asp-for="LocalizacaoId" asp-items="@(ViewBag.Localizacoes as SelectList)" class="form-control">
+        <option value="">Sem localização</option>
+    </select>
+    <span asp-validation-for="LocalizacaoId" class="text-danger"></span>
 </div>
 
 

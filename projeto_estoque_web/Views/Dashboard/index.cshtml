@@ -1,7 +1,12 @@
 @model projeto_estoque_web.Models.view_models.DashboardViewModel
+@using System.Globalization
 
 @{
     ViewData["Title"] = "Dashboard";
+
+    var maiorVenda = Model.VendasUltimos7Dias.Count == 0
+        ? 0m
+        : Model.VendasUltimos7Dias.Max(venda => venda.Valor);
 }
 
 @section Styles {
@@ -84,19 +89,21 @@
 
             <div class="fake-chart">
                 <div class="chart-line">
-                    <span style="height: 35%"></span>
-                    <span style="height: 55%"></span>
-                    <span style="height: 45%"></span>
-                    <span style="height: 70%"></span>
-                    <span style="height: 60%"></span>
-                    <span style="height: 85%"></span>
-                    <span style="height: 72%"></span>
+                    @foreach (var venda in Model.VendasUltimos7Dias)
+                    {
+                        var altura = venda.Valor <= 0 || maiorVenda <= 0
+                            ? 0m
+                            : Math.Max(2m, Math.Round(venda.Valor / maiorVenda * 100m));
+
+                        <span style="height: @altura.ToString(CultureInfo.InvariantCulture)%"
+                              title="@venda.Data.ToString("dd/MM") - @venda.Valor.ToString("C")"></span>
+                    }
                 </div>
 
                 <div class="chart-days">
-                    @for (int i = 6; i >= 0; i--)
+                    @foreach (var venda in Model.VendasUltimos7Dias)
                     {
-                        <span>@DateTime.Now.AddDays(-i).ToString("dd/MM")</span>
+                        <span>@venda.Data.ToString("dd/MM")</span>
                     }
                 </div>
             </div>
@@ -114,25 +121,32 @@
                 </div>
             </div>
 
-            <div class="best-products">
+            @if (Model.ProdutosMaisVendidos.Count == 0)
+            {
+                <p class="empty-state">Nenhuma venda registrada neste mês.</p>
+            }
+            else
+            {
+                <div class="best-products">
 
-                @foreach (var produto in Model.ProdutosMaisVendidos)
-                {
-                    <div class="best-product">
+                    @foreach (var produto in Model.ProdutosMaisVendidos)
+                    {
+                        <div class="best-product">
 
-                        <div class="product-icon">
-                            📦
+                            <div class="product-icon">
+                                📦
+                            </div>
+
+                            <div class="product-info">
+                                <strong>@produto.Nome</strong>
+                                <span>@produto.QuantidadeVendida unidades</span>
+                            </div>
+
                         </div>
+                    }
 
-                        <div class="product-info">
-                            <strong>@produto.Nome</strong>
-                            <span>@produto.QuantidadeVendida unidades</span>
-                        </div>
-
-                    </div>
-                }
-
-            </div>
+                </div>
+            }
 
         </div>
 
@@ -239,47 +253,54 @@
         </div>
 
 
-        <div class="table-container">
+        @if (Model.UltimosPedidos.Count == 0)
+        {
+            <p class="empty-state">Nenhum pedido registrado ainda.</p>
+        }
+        else
+        {
+            <div class="table-container">
 
-            <table>
+                <table>
 
-                <thead>
-                    <tr>
-                        <th>Pedido</th>
-                        <th>Data</th>
-                        <th>Valor</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-
-                    @foreach (var pedido in Model.UltimosPedidos)
-                    {
+                    <thead>
                         <tr>
-                            <td>#@pedido.Id</td>
-
-                            <td>
-                                @pedido.Data.ToString("dd/MM/yyyy")
-                            </td>
-
-                            <td>
-                                @pedido.Valor.ToString("C")
-                            </td>
-
-                            <td>
-                                <span class="status @pedido.Status.ToLower()">
-                                    @pedido.Status
-                                </span>
-                            </td>
+                            <th>Pedido</th>
+                            <th>Data</th>
+                            <th>Valor</th>
+                            <th>Status</th>
                         </tr>
-                    }
+                    </thead>
 
-                </tbody>
+                    <tbody>
 
-            </table>
+                        @foreach (var pedido in Model.UltimosPedidos)
+                        {
+                            <tr>
+                                <td>#@pedido.Id</td>
 
-        </div>
+                                <td>
+                                    @pedido.Data.ToString("dd/MM/yyyy")
+                                </td>
+
+                                <td>
+                                    @pedido.Valor.ToString("C")
+                                </td>
+
+                                <td>
+                                    <span class="status @pedido.StatusClasse">
+                                        @pedido.Status
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+
+                    </tbody>
+
+                </table>
+
+            </div>
+        }
 
     </div>
 

@@ -19,6 +19,12 @@
     return d;
   }
 
+  function formatCep(d) {
+    d = d.slice(0, 8);
+    if (d.length > 5) return d.replace(/^(\d{5})(\d{1,3})$/, "$1-$2");
+    return d;
+  }
+
   function formatTel(d) {
     d = d.slice(0, 11);
     if (d.length > 6)
@@ -41,5 +47,6 @@
   }
 
   bind("#Dados_Cnpj", formatCnpj);
+  bind("#Dados_Cep", formatCep);
   bind("#Dados_Telefone", formatTel);
 })();

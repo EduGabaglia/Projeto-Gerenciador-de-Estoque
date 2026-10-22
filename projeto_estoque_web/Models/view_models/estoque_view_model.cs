@@ -19,6 +19,7 @@ namespace projeto_estoque_web.Models.view_models
     public class MovimentoEstoqueViewModel
     {
         [Display(Name = "Produto")]
+        [Range(1, int.MaxValue, ErrorMessage = "Selecione um produto.")]
         public int ProdutoId { get; set; }
 
         [Display(Name = "Quantidade")]
@@ -30,6 +31,7 @@ namespace projeto_estoque_web.Models.view_models
     public class AjusteEstoqueViewModel
     {
         [Display(Name = "Produto")]
+        [Range(1, int.MaxValue, ErrorMessage = "Selecione um produto.")]
         public int ProdutoId { get; set; }
 
         [Display(Name = "Nova quantidade")]

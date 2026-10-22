@@ -1,33 +1,21 @@
 using Microsoft.AspNetCore.Mvc;
 using projeto_estoque_web.Models.view_models;
+using projeto_estoque_web.Services;
 
 namespace projeto_estoque_web.Controllers
 {
     public class DashboardController : Controller
     {
-        public IActionResult Index()
+        private readonly EstoqueApiClient _api;
+
+        public DashboardController(EstoqueApiClient api) => _api = api;
+
+        public async Task<IActionResult> Index()
         {
-            var produtos = ProdutosController.TodosOsProdutos;
-            var pedidos = PedidosController.TodosOsPedidos;
+            var dados = await _api.ObterDashboardAsync();
+            var promocoes = await _api.TodasPromocoesAsync();
 
-            var agora = DateTime.Now;
-
-            var maisVendidos = pedidos
-                .Where(p => p.Status != "Cancelado")
-                .SelectMany(p => p.Itens)
-                .GroupBy(i => i.NomeProduto)
-                .Select(g => new ProdutoMaisVendidoViewModel
-                {
-                    Nome = g.Key,
-                    QuantidadeVendida = g.Sum(i => i.Quantidade)
-                })
-                .OrderByDescending(x => x.QuantidadeVendida)
-                .Take(4)
-                .ToList();
-
-            var ativas = PromocoesController.TodasAsPromocoes
-                .Where(p => p.Ativa)
-                .ToList();
+            var ativas = promocoes.Where(p => p.Ativa).ToList();
 
             var itensEmPromocao = ativas
                 .SelectMany(p => p.Itens.Select(i => new ItemPromocaoViewModel
@@ -37,8 +25,8 @@ namespace projeto_estoque_web.Controllers
                     NomePromocao = p.Nome,
                     PrecoTabela = i.PrecoTabela,
                     DescontoPercentual = p.DescontoPercentual,
-                    PrecoPromocional = i.PrecoPromocional(p.DescontoPercentual),
-                    Economia = i.Economia(p.DescontoPercentual)
+                    PrecoPromocional = i.PrecoPromocional,
+                    Economia = i.Economia
                 }))
                 .OrderByDescending(x => x.Economia)
                 .Take(6)
@@ -46,29 +34,33 @@ namespace projeto_estoque_web.Controllers
 
             var model = new DashboardViewModel
             {
-                TotalProdutos = produtos.Count,
-                EstoqueBaixo = produtos.Count(p => p.Quantidade <= 5),
-                PedidosPendentes = pedidos.Count(p => p.Status == "Pendente"),
-                VendasMes = pedidos
-                    .Where(p => p.Status != "Cancelado" &&
-                                p.Data.Year == agora.Year &&
-                                p.Data.Month == agora.Month)
-                    .Sum(p => p.ValorTotal),
+                TotalProdutos = dados.Resumo.TotalProdutos,
+                EstoqueBaixo = dados.Resumo.EstoqueBaixo,
+                PedidosPendentes = dados.Resumo.PedidosPendentes,
+                VendasMes = dados.Resumo.VendasMes,
 
-                UltimosPedidos = pedidos
-                    .OrderByDescending(p => p.Data)
-                    .ThenByDescending(p => p.Id)
-                    .Take(3)
-                    .Select(p => new PedidoResumoViewModel
-                    {
-                        Id = p.Id,
-                        Data = p.Data,
-                        Valor = p.ValorTotal,
-                        Status = p.Status
-                    })
-                    .ToList(),
+                UltimosPedidos = dados.UltimosPedidos.Select(pedido => new PedidoResumoViewModel
+                {
+                    Id = pedido.Id,
+                    Cliente = pedido.Cliente,
+                    Data = pedido.Data,
+                    Valor = pedido.ValorTotal,
+                    Status = pedido.StatusLabel,
+                    StatusClasse = pedido.StatusClasse,
+                    QuantidadeItens = pedido.TotalItens
+                }).ToList(),
 
-                ProdutosMaisVendidos = maisVendidos,
+                ProdutosMaisVendidos = dados.MaisVendidos.Select(produto => new ProdutoMaisVendidoViewModel
+                {
+                    Nome = produto.NomeProduto,
+                    QuantidadeVendida = produto.Quantidade
+                }).ToList(),
+
+                VendasUltimos7Dias = dados.VendasUltimos7Dias.Select(venda => new VendaDiaViewModel
+                {
+                    Data = venda.Data,
+                    Valor = venda.Valor
+                }).ToList(),
 
                 PromocoesAtivas = ativas.Count,
                 ProdutosEmPromocao = ativas

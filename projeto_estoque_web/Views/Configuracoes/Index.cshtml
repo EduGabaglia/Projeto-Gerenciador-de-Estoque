@@ -2,6 +2,9 @@
 
 @{
     ViewData["Title"] = "Configurações";
+
+    var cidadeUf = string.Join("/", new[] { Model.Resumo.Cidade, Model.Resumo.Uf }
+        .Where(valor => !string.IsNullOrWhiteSpace(valor)));
 }
 
 @section Styles {
@@ -29,7 +32,7 @@
             <div class="card-icon">🏢</div>
             <div>
                 <span>Empresa</span>
-                <strong>@Model.Resumo.Nome</strong>
+                <strong>@(string.IsNullOrWhiteSpace(Model.Resumo.Nome) ? "—" : Model.Resumo.Nome)</strong>
             </div>
         </div>
 
@@ -37,7 +40,7 @@
             <div class="card-icon">📋</div>
             <div>
                 <span>CNPJ</span>
-                <strong>@Model.Resumo.Cnpj</strong>
+                <strong>@(string.IsNullOrWhiteSpace(Model.Resumo.Cnpj) ? "—" : Model.Resumo.Cnpj)</strong>
             </div>
         </div>
 
@@ -45,7 +48,7 @@
             <div class="card-icon">📍</div>
             <div>
                 <span>Cidade/UF</span>
-                <strong>@Model.Resumo.Cidade@(string.IsNullOrWhiteSpace(Model.Resumo.Uf) ? "" : "/" + Model.Resumo.Uf)</strong>
+                <strong>@(string.IsNullOrWhiteSpace(cidadeUf) ? "—" : cidadeUf)</strong>
             </div>
         </div>
 
@@ -54,8 +57,7 @@
     @if (Model.DadosDeExemplo)
     {
         <div class="alert alert-info">
-            ⚠️ Os dados exibidos abaixo são valores de exemplo e não representam sua empresa real.
-            Preencha o formulário para substituí-los.
+            ⚠️ Nenhum dado da empresa foi cadastrado ainda. Preencha o formulário abaixo para começar.
         </div>
     }
 
@@ -101,15 +103,15 @@
             <div class="form-row">
 
                 <div class="form-group">
-                    <label asp-for="Dados.Endereco"></label>
-                    <input asp-for="Dados.Endereco" placeholder="Ex.: Rua Exemplo, 123" />
-                    <span asp-validation-for="Dados.Endereco" class="text-danger"></span>
+                    <label asp-for="Dados.Cep"></label>
+                    <input asp-for="Dados.Cep" maxlength="9" placeholder="Ex.: 00000-000" />
+                    <span asp-validation-for="Dados.Cep" class="text-danger"></span>
                 </div>
 
                 <div class="form-group">
-                    <label asp-for="Dados.Telefone"></label>
-                    <input asp-for="Dados.Telefone" maxlength="15" placeholder="Ex.: (11) 99999-9999" />
-                    <span asp-validation-for="Dados.Telefone" class="text-danger"></span>
+                    <label asp-for="Dados.Endereco"></label>
+                    <input asp-for="Dados.Endereco" placeholder="Ex.: Rua Exemplo, 123" />
+                    <span asp-validation-for="Dados.Endereco" class="text-danger"></span>
                 </div>
 
             </div>
@@ -130,10 +132,20 @@
 
             </div>
 
-            <div class="form-group">
-                <label asp-for="Dados.Email"></label>
-                <input asp-for="Dados.Email" placeholder="Ex.: contato@empresa.com.br" />
-                <span asp-validation-for="Dados.Email" class="text-danger"></span>
+            <div class="form-row">
+
+                <div class="form-group">
+                    <label asp-for="Dados.Telefone"></label>
+                    <input asp-for="Dados.Telefone" maxlength="15" placeholder="Ex.: (11) 99999-9999" />
+                    <span asp-validation-for="Dados.Telefone" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="Dados.Email"></label>
+                    <input asp-for="Dados.Email" placeholder="Ex.: contato@empresa.com.br" />
+                    <span asp-validation-for="Dados.Email" class="text-danger"></span>
+                </div>
+
             </div>
 
             <div class="form-actions">

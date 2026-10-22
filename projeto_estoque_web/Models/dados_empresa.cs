@@ -7,22 +7,31 @@ namespace projeto_estoque_web.Models
         public int Id { get; set; }
 
         [Required(ErrorMessage = "Informe o nome da empresa.")]
-        [StringLength(100, ErrorMessage = "O nome deve ter no máximo 100 caracteres.")]
+        [StringLength(150, ErrorMessage = "O nome deve ter no máximo 150 caracteres.")]
         public string Nome { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Informe um CNPJ válido.")]
+        [Display(Name = "CNPJ")]
         [RegularExpression(@"^(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}|\d{14})$", ErrorMessage = "Informe um CNPJ válido, ex.: 00.000.000/0000-00.")]
         public string? Cnpj { get; set; }
 
+        [Required(ErrorMessage = "Informe o CEP.")]
+        [Display(Name = "CEP")]
+        [RegularExpression(@"^(\d{5}-\d{3}|\d{8})$", ErrorMessage = "Informe um CEP válido, ex.: 00000-000.")]
+        public string? Cep { get; set; }
+
         [Required(ErrorMessage = "Informe o endereço.")]
-        [StringLength(120, ErrorMessage = "O endereço deve ter no máximo 120 caracteres.")]
+        [Display(Name = "Endereço")]
+        [StringLength(150, ErrorMessage = "O endereço deve ter no máximo 150 caracteres.")]
         public string Endereco { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Informe a cidade.")]
-        [StringLength(60, ErrorMessage = "A cidade deve ter no máximo 60 caracteres.")]
+        [Display(Name = "Cidade")]
+        [StringLength(100, ErrorMessage = "A cidade deve ter no máximo 100 caracteres.")]
         public string Cidade { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Informe a UF.")]
+        [Display(Name = "UF")]
         [StringLength(2, MinimumLength = 2, ErrorMessage = "A UF deve ter 2 letras.")]
         public string? Uf { get; set; }
 
@@ -33,7 +42,7 @@ namespace projeto_estoque_web.Models
 
         [Required(ErrorMessage = "Informe o e-mail da empresa.")]
         [EmailAddress(ErrorMessage = "Informe um e-mail válido.")]
-        [StringLength(100, ErrorMessage = "O e-mail deve ter no máximo 100 caracteres.")]
+        [StringLength(254, ErrorMessage = "O e-mail deve ter no máximo 254 caracteres.")]
         public string Email { get; set; } = string.Empty;
     }
 }
