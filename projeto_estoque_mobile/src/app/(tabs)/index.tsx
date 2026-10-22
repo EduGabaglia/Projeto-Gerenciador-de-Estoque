@@ -1,56 +1,100 @@
-import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
+import { FlatList, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { categorias, produtos } from '@/data/mock';
 import { useCart } from '@/contexts/CartContext';
 import { colors } from '@/theme';
+import { ScreenLayout } from '@/components/screen-layout';
+import { AddToCartButton } from '@/components/add-to-cart-button';
+import { useGrade } from '@/hooks/use-grade';
 
 export default function Inicio() {
   const router = useRouter();
   const { add } = useCart();
+  const { colunas } = useGrade();
 
   return (
-    <View style={s.container}>
-      <TextInput style={s.busca} placeholder="Buscar produtos..." />
+    <ScreenLayout title="Início" subtitle="Escolha seus produtos favoritos">
+      <View style={s.container}>
+        <TextInput
+          style={s.busca}
+          placeholder="Buscar produtos..."
+          placeholderTextColor={colors.muted}
+        />
 
-      <View style={s.categorias}>
-        {categorias.map((c) => (
-          <TouchableOpacity key={c} style={s.cat} onPress={() => router.push(`/categoria/${c}`)}>
-            <Ionicons name="pricetag" size={26} color={colors.primary} />
-            <Text style={s.catTxt}>{c}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <Text style={s.secao}>Em destaque</Text>
-      <FlatList
-        data={produtos.filter((p) => p.destaque)}
-        keyExtractor={(p) => p.id}
-        numColumns={2}
-        columnWrapperStyle={{ gap: 12 }}
-        renderItem={({ item }) => (
-          <View style={s.card}>
-            <Text style={s.nome}>{item.nome}</Text>
-            <Text style={s.preco}>R$ {item.preco.toFixed(2).replace('.', ',')}</Text>
-            <TouchableOpacity style={s.add} onPress={() => add(item)}>
-              <Ionicons name="add" size={20} color="#fff" />
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={s.categorias}>
+          {categorias.map((c) => (
+            <TouchableOpacity
+              key={c}
+              style={s.cat}
+              onPress={() => router.push(`/categoria/${c}`)}>
+              <Ionicons name="pricetag" size={24} color={colors.primary} />
+              <Text style={s.catTxt} numberOfLines={1}>
+                {c}
+              </Text>
             </TouchableOpacity>
-          </View>
-        )}
-      />
-    </View>
+          ))}
+        </ScrollView>
+
+        <Text style={s.secao}>Em destaque</Text>
+
+        <FlatList
+          key={`grade-${colunas}`}
+          data={produtos.filter((p) => p.destaque)}
+          keyExtractor={(p) => p.id}
+          numColumns={colunas}
+          columnWrapperStyle={{ gap: 12 }}
+          contentContainerStyle={s.lista}
+          showsVerticalScrollIndicator={false}
+          renderItem={({ item }) => (
+            <View style={s.card}>
+              <Text style={s.nome} numberOfLines={2}>
+                {item.nome}
+              </Text>
+              <Text style={s.preco}>R$ {item.preco.toFixed(2).replace('.', ',')}</Text>
+              <AddToCartButton onPress={() => add(item)} />
+            </View>
+          )}
+        />
+      </View>
+    </ScreenLayout>
   );
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg, padding: 16, paddingTop: 56 },
-  busca: { borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 12, marginBottom: 16 },
-  categorias: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
-  cat: { alignItems: 'center', backgroundColor: colors.card, padding: 12, borderRadius: 10, width: 76 },
-  catTxt: { fontSize: 11, marginTop: 4 },
-  secao: { fontSize: 16, fontWeight: '700', marginBottom: 12 },
-  card: { flex: 1, backgroundColor: colors.card, borderRadius: 10, padding: 12, marginBottom: 12, height: 130, justifyContent: 'space-between' },
-  nome: { fontWeight: '600' },
-  preco: { color: colors.muted },
-  add: { alignSelf: 'flex-end', backgroundColor: colors.primary, borderRadius: 6, padding: 4 },
+  container: { flex: 1, backgroundColor: colors.bg, padding: 16 },
+  busca: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    color: colors.text,
+  },
+  categorias: { gap: 10, paddingBottom: 4 },
+  cat: {
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    width: 92,
+  },
+  catTxt: { fontSize: 11, marginTop: 4, color: colors.text },
+  secao: { fontSize: 16, fontWeight: '700', marginBottom: 12, marginTop: 16, color: colors.text },
+  lista: { paddingBottom: 24 },
+  card: {
+    flex: 1,
+    backgroundColor: colors.card,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+    minHeight: 120,
+    justifyContent: 'space-between',
+  },
+  nome: { fontWeight: '600', color: colors.text },
+  preco: { color: colors.muted, marginTop: 4 },
 });

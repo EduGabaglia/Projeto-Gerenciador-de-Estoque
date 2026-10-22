@@ -6,5 +6,6 @@ obj/
 *.log
 .idea/
 *.tmp
-*.tempnode_modules/
+*.temp
+node_modules/
 .expo/

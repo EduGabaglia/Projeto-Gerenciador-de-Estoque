@@ -1,7 +1,7 @@
-import axios from 'axios';
+import { create } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
-export const api = axios.create({
+export const api = create({
   baseURL: 'http://SEU_IP:3000', // trocar quando a API do grupo estiver pronta
   timeout: 10000,
 });
