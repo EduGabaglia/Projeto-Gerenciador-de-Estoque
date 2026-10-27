@@ -1,5 +1,7 @@
 using System.Globalization;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Localization;
+using Microsoft.AspNetCore.Mvc.Authorization;
 using projeto_estoque_web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -7,6 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllersWithViews(options =>
 {
+    options.Filters.Add(new AuthorizeFilter());
     options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true;
     options.ModelBindingMessageProvider.SetValueMustNotBeNullAccessor(field => $"O campo \"{field}\" é obrigatório.");
     options.ModelBindingMessageProvider.SetAttemptedValueIsInvalidAccessor((value, field) => $"O valor \"{value}\" não é válido para \"{field}\".");
@@ -20,6 +23,22 @@ builder.Services.AddControllersWithViews(options =>
     options.ModelBindingMessageProvider.SetValueIsInvalidAccessor(field => $"O valor informado para \"{field}\" não é válido.");
     options.ModelBindingMessageProvider.SetValueMustBeANumberAccessor(field => $"O campo \"{field}\" deve ser um número.");
 });
+
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/Login";
+        options.LogoutPath = "/Login/Sair";
+        options.AccessDeniedPath = "/Login";
+        options.Cookie.Name = "ProjetoEstoque.Admin";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+        options.SlidingExpiration = true;
+    });
+
+builder.Services.AddAuthorization();
 
 // Cliente HTTP que concentra o acesso ao sistema web à API REST.
 var apiBaseUrl = builder.Configuration["Api:BaseUrl"] ?? "http://localhost:5080";
@@ -55,6 +74,7 @@ if (!app.Environment.IsDevelopment())
 //app.UseHttpsRedirection();
 app.UseRouting();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapStaticAssets();

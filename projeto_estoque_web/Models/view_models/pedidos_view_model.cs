@@ -4,7 +4,7 @@ namespace projeto_estoque_web.Models.view_models
     {
         public int TotalPedidos { get; set; }
         public int PedidosPendentes { get; set; }
-        public int PedidosEntregues { get; set; }
+        public int PedidosRetirados { get; set; }
         public decimal ReceitaTotal { get; set; }
 
         public List<PedidoResumoViewModel> Pedidos { get; set; } = new();

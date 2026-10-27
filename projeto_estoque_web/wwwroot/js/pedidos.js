@@ -58,4 +58,27 @@ document.addEventListener("DOMContentLoaded", function () {
 
     renumerarItens();
 
+    document.addEventListener("click", function (evento) {
+
+        const alvo = evento.target instanceof Element
+            ? evento.target.closest(".btn-produtos")
+            : null;
+
+        if (!alvo)
+            return;
+
+        const idDetalhe = alvo.getAttribute("data-target");
+        const detalhe = idDetalhe ? document.getElementById(idDetalhe) : null;
+
+        if (!detalhe)
+            return;
+
+        const aberto = alvo.getAttribute("aria-expanded") === "true";
+
+        alvo.setAttribute("aria-expanded", String(!aberto));
+        alvo.classList.toggle("aberto", !aberto);
+        detalhe.hidden = aberto;
+
+    });
+
 });

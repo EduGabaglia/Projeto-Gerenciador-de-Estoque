@@ -23,7 +23,7 @@ public record PedidoDto(
 public record PedidosResumoDto(
     int TotalPedidos,
     int Pendentes,
-    int Entregues,
+    int Retirados,
     decimal ReceitaTotal);
 
 public record PedidosPaginaDto(

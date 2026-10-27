@@ -66,8 +66,8 @@
             </div>
 
             <div>
-                <span>Pedidos entregues</span>
-                <strong>@Model.PedidosEntregues</strong>
+                <span>Pedidos retirados</span>
+                <strong>@Model.PedidosRetirados</strong>
             </div>
         </div>
 
@@ -122,7 +122,7 @@
                             <th>Pedido</th>
                             <th>Data</th>
                             <th>Cliente</th>
-                            <th>Itens</th>
+                            <th>Produtos</th>
                             <th>Valor</th>
                             <th>Status</th>
                             <th>Ações</th>
@@ -146,8 +146,25 @@
                                     @pedido.Cliente
                                 </td>
 
-                                <td>
-                                    @pedido.QuantidadeItens
+                                <td class="pedido-produtos">
+                                    @if (pedido.Itens.Count > 0)
+                                    {
+                                        <button type="button"
+                                                class="btn-produtos"
+                                                data-target="pedido-produtos-@pedido.Id"
+                                                aria-expanded="false"
+                                                aria-controls="pedido-produtos-@pedido.Id">
+                                            <span class="produtos-total">
+                                                @pedido.QuantidadeItens @(pedido.QuantidadeItens == 1 ? "item" : "itens")
+                                            </span>
+                                            <span class="produtos-ver">Ver produtos</span>
+                                            <span class="produtos-chevron" aria-hidden="true">&#9662;</span>
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <span class="produtos-vazio">Sem itens</span>
+                                    }
                                 </td>
 
                                 <td class="pedido-valor">
@@ -205,6 +222,29 @@
                                     </div>
                                 </td>
                             </tr>
+
+                            @if (pedido.Itens.Count > 0)
+                            {
+                                <tr class="pedido-produtos-linha"
+                                    id="pedido-produtos-@pedido.Id"
+                                    hidden>
+                                    <td colspan="7">
+                                        <div class="produtos-detalhe">
+                                            <div class="produtos-detalhe-titulo">Produtos do pedido</div>
+
+                                            @foreach (var item in pedido.Itens)
+                                            {
+                                                <div class="produto-linha">
+                                                    <span class="produto-qtd">@item.Quantidade&times;</span>
+                                                    <span class="produto-nome">@item.NomeProduto</span>
+                                                    <span class="produto-preco">@item.PrecoUnitario.ToString("C") cada</span>
+                                                    <span class="produto-subtotal">@item.Subtotal.ToString("C")</span>
+                                                </div>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
                         }
 
                     </tbody>
@@ -250,3 +290,7 @@
     </div>
 
 </div>
+
+@section Scripts {
+    <script src="~/js/pedidos.js" asp-append-version="true"></script>
+}

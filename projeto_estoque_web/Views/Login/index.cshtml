@@ -16,21 +16,24 @@
         <p>
           Informe seu usuário e senha para acessar o sistema.
         </p>
-        <form asp-controller="Login" asp-action="Index" method="post">
+        <form asp-controller="Login"
+              asp-action="Index"
+              asp-route-returnUrl="@(ViewData["ReturnUrl"])"
+              method="post">
             @Html.ValidationSummary()
             <label for = "usuario">Usuário</label>
             <div class="input-wrapper">
               <span class="input-icon">
                 <i class="bi bi-person-fill"></i>
               </span>
-              <input asp-for = "Usuario" placeholder="Digite seu usuário.."required>
+              <input asp-for = "Usuario" placeholder="Digite seu usuário.." autocomplete="username" required>
             </div>
             <label for = "senha">Senha</label>
             <div class="input-wrapper">
               <span class="input-icon">
                   <i class="bi bi-lock-fill"></i>
               </span>
-              <input asp-for = "Senha" placeholder="Digite sua senha.." type =      "password" required>
+              <input asp-for = "Senha" placeholder="Digite sua senha.." type = "password" autocomplete="current-password" required>
               <button type="button" id="toggle_password">
                   <i class="password-icon bi bi-eye-slash"></i>
               </button>

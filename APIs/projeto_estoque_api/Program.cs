@@ -1,5 +1,9 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using projeto_estoque_api.Common;
 using projeto_estoque_api.Data;
 using projeto_estoque_api.Middlewares;
 using projeto_estoque_api.Services;
@@ -41,6 +45,37 @@ if (string.IsNullOrWhiteSpace(conexao))
 builder.Services.AddDbContext<EstoqueDbContext>(options =>
     options.UseSqlServer(conexao));
 
+var jwtKey = builder.Configuration["Jwt:Key"];
+
+if (string.IsNullOrWhiteSpace(jwtKey) || Encoding.UTF8.GetByteCount(jwtKey) < 32)
+{
+    throw new InvalidOperationException(
+        "A chave JWT 'Jwt:Key' não foi configurada (mínimo de 32 bytes). " +
+        "Defina com 'dotnet user-secrets set \"Jwt:Key\" \"<chave>\"' " +
+        "ou pela variável de ambiente Jwt__Key.");
+}
+
+builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "projeto_estoque_api",
+            ValidateAudience = true,
+            ValidAudience = builder.Configuration["Jwt:Audience"] ?? "projeto_estoque_mobile",
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromMinutes(2)
+        };
+    });
+
+builder.Services.AddAuthorization();
+
 builder.Services.AddScoped<ProdutoService>();
 builder.Services.AddScoped<CategoriaService>();
 builder.Services.AddScoped<EstoqueService>();
@@ -48,6 +83,8 @@ builder.Services.AddScoped<PedidoService>();
 builder.Services.AddScoped<PromocaoService>();
 builder.Services.AddScoped<ConfiguracaoService>();
 builder.Services.AddScoped<DashboardService>();
+builder.Services.AddScoped<AuthService>();
+builder.Services.AddSingleton<JwtService>();
 
 builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen();
@@ -64,6 +101,9 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseCors();
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 

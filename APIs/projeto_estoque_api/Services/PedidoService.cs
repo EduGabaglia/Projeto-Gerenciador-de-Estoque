@@ -23,6 +23,7 @@ public class PedidoService
             .AsNoTracking()
             .Include(p => p.Usuario)
             .Include(p => p.PedidoItems)
+            .ThenInclude(i => i.Produto)
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(busca))
@@ -54,7 +55,7 @@ public class PedidoService
         var resumo = new PedidosResumoDto(
             await _db.Pedidos.CountAsync(),
             await _db.Pedidos.CountAsync(p => p.Status == "PENDENTE"),
-            await _db.Pedidos.CountAsync(p => p.Status == "ENTREGUE"),
+            await _db.Pedidos.CountAsync(p => p.Status == "RETIRADO"),
             await _db.Pedidos
                 .Where(p => p.Status != "CANCELADO")
                 .SumAsync(p => (decimal?)p.ValorTotal) ?? 0m);
@@ -68,27 +69,87 @@ public class PedidoService
             resumo);
     }
 
-    public async Task<PedidoDto> ObterAsync(int id)
+    public async Task<PedidoDto> ObterAsync(int id, int? usuarioId = null)
     {
-        var pedido = await _db.Pedidos
+        if (usuarioId is not null)
+            await GarantirUsuarioAtivoAsync(usuarioId.Value);
+
+        var consulta = _db.Pedidos
             .AsNoTracking()
             .Include(p => p.Usuario)
             .Include(p => p.PedidoItems)
             .ThenInclude(i => i.Produto)
+            .AsQueryable();
+
+        if (usuarioId is not null)
+            consulta = consulta.Where(p => p.UsuarioId == usuarioId.Value);
+
+        var pedido = await consulta
             .FirstOrDefaultAsync(p => p.Id == id)
             ?? throw ErroDeNegocioException.NaoEncontrado("Pedido não encontrado.");
 
         return ParaDto(pedido);
     }
 
-    public async Task<PedidoDto> CriarAsync(PedidoSalvarDto dados)
+    public async Task<PedidosPaginaDto> ListarDoUsuarioAsync(
+        int usuarioId, string? status, int pagina, int itensPorPagina)
+    {
+        await GarantirUsuarioAtivoAsync(usuarioId);
+
+        pagina = Math.Max(1, pagina);
+        itensPorPagina = Math.Clamp(itensPorPagina, 1, 100);
+
+        var consulta = _db.Pedidos
+            .AsNoTracking()
+            .Include(p => p.Usuario)
+            .Include(p => p.PedidoItems)
+            .ThenInclude(i => i.Produto)
+            .Where(p => p.UsuarioId == usuarioId);
+
+        var statusFiltro = StatusPedido.Converter(status);
+
+        if (statusFiltro is not null)
+            consulta = consulta.Where(p => p.Status == statusFiltro);
+
+        var total = await consulta.CountAsync();
+        var totalPaginas = Math.Max(1, (int)Math.Ceiling(total / (double)itensPorPagina));
+        pagina = Math.Clamp(pagina, 1, totalPaginas);
+
+        var itens = await consulta
+            .OrderByDescending(p => p.Data)
+            .ThenByDescending(p => p.Id)
+            .Skip((pagina - 1) * itensPorPagina)
+            .Take(itensPorPagina)
+            .ToListAsync();
+
+        var resumo = new PedidosResumoDto(
+            total,
+            await _db.Pedidos.CountAsync(p => p.UsuarioId == usuarioId && p.Status == "PENDENTE"),
+            await _db.Pedidos.CountAsync(p => p.UsuarioId == usuarioId && p.Status == "RETIRADO"),
+            await _db.Pedidos
+                .Where(p => p.UsuarioId == usuarioId && p.Status != "CANCELADO")
+                .SumAsync(p => (decimal?)p.ValorTotal) ?? 0m);
+
+        return new PedidosPaginaDto(
+            itens.Select(p => ParaDto(p)).ToList(),
+            total,
+            pagina,
+            totalPaginas,
+            itensPorPagina,
+            resumo);
+    }
+
+    public async Task<PedidoDto> CriarAsync(PedidoSalvarDto dados, int? usuarioId = null)
     {
         var itens = NormalizarItens(dados.Itens);
-        var status = StatusPedido.Normalizar(dados.Status);
-        var data = (dados.Data ?? DateTime.Today).Date;
+        // Pedidos feitos pelo app sempre entram como pendentes, na data atual.
+        // O painel web continua podendo informar status e data manualmente.
+        var status = usuarioId is null ? StatusPedido.Normalizar(dados.Status) : "PENDENTE";
+        var data = usuarioId is null ? (dados.Data ?? DateTime.Today).Date : DateTime.Today;
 
-        var usuario = await BuscarOuCriarUsuarioAsync(dados.Cliente);
+        var usuario = await ResolverUsuarioAsync(dados.Cliente, usuarioId);
         var produtos = await CarregarProdutosAsync(itens);
+        var descontos = await CarregarDescontosAtivosAsync(produtos.Keys);
 
         if (status != "CANCELADO")
             ValidarEstoque(itens, produtos, null);
@@ -110,7 +171,7 @@ public class PedidoService
             {
                 ProdutoId = produto.Id,
                 Quantidade = item.Quantidade,
-                PrecoUnitario = produto.Preco
+                PrecoUnitario = PrecoVenda(produto, descontos)
             });
         }
 
@@ -130,10 +191,19 @@ public class PedidoService
         return ParaDto(pedido, produtos.ToDictionary(p => p.Key, p => p.Value.Nome));
     }
 
-    public async Task<PedidoDto> AtualizarAsync(int id, PedidoSalvarDto dados)
+    public async Task<PedidoDto> AtualizarAsync(int id, PedidoSalvarDto dados, int? usuarioId = null)
     {
-        var pedido = await _db.Pedidos
+        if (usuarioId is not null)
+            await GarantirUsuarioAtivoAsync(usuarioId.Value);
+
+        var consulta = _db.Pedidos
             .Include(p => p.PedidoItems)
+            .AsQueryable();
+
+        if (usuarioId is not null)
+            consulta = consulta.Where(p => p.UsuarioId == usuarioId.Value);
+
+        var pedido = await consulta
             .FirstOrDefaultAsync(p => p.Id == id)
             ?? throw ErroDeNegocioException.NaoEncontrado("Pedido não encontrado.");
 
@@ -141,8 +211,9 @@ public class PedidoService
         var status = StatusPedido.Normalizar(dados.Status);
         var data = (dados.Data ?? pedido.Data).Date;
 
-        var usuario = await BuscarOuCriarUsuarioAsync(dados.Cliente);
+        var usuario = await ResolverUsuarioAsync(dados.Cliente, usuarioId);
         var produtos = await CarregarProdutosAsync(itens);
+        var descontos = await CarregarDescontosAtivosAsync(produtos.Keys);
 
         // O saldo reservado pelo pedido anterior é considerado disponível (RN-32).
         if (status != "CANCELADO")
@@ -166,7 +237,7 @@ public class PedidoService
             PedidoId = pedido.Id,
             ProdutoId = item.ProdutoId,
             Quantidade = item.Quantidade,
-            PrecoUnitario = produtos[item.ProdutoId].Preco
+            PrecoUnitario = PrecoVenda(produtos[item.ProdutoId], descontos)
         }).ToList();
 
         pedido.ValorTotal = pedido.PedidoItems.Sum(i => i.Quantidade * i.PrecoUnitario);
@@ -182,16 +253,30 @@ public class PedidoService
         return ParaDto(pedido, produtos.ToDictionary(p => p.Key, p => p.Value.Nome));
     }
 
-    public async Task<PedidoDto> AtualizarStatusAsync(int id, string? statusValor)
+    public async Task<PedidoDto> AtualizarStatusAsync(int id, string? statusValor, int? usuarioId = null)
     {
-        var pedido = await _db.Pedidos
+        if (usuarioId is not null)
+            await GarantirUsuarioAtivoAsync(usuarioId.Value);
+
+        var consulta = _db.Pedidos
             .Include(p => p.Usuario)
             .Include(p => p.PedidoItems)
+            .ThenInclude(i => i.Produto)
+            .AsQueryable();
+
+        if (usuarioId is not null)
+            consulta = consulta.Where(p => p.UsuarioId == usuarioId.Value);
+
+        var pedido = await consulta
             .FirstOrDefaultAsync(p => p.Id == id)
             ?? throw ErroDeNegocioException.NaoEncontrado("Pedido não encontrado.");
 
         var novoStatus = StatusPedido.Converter(statusValor)
             ?? throw new ErroDeNegocioException("Status inválido.");
+
+        // No app mobile, o cliente só pode cancelar pedidos ainda pendentes.
+        if (usuarioId is not null && novoStatus == "CANCELADO" && pedido.Status != "PENDENTE")
+            throw ErroDeNegocioException.Conflito("Este pedido não pode mais ser cancelado.");
 
         // Mesmo status é operação silenciosa (RN-36).
         if (novoStatus == pedido.Status)
@@ -218,10 +303,19 @@ public class PedidoService
         return ParaDto(pedido);
     }
 
-    public async Task ExcluirAsync(int id)
+    public async Task ExcluirAsync(int id, int? usuarioId = null)
     {
-        var pedido = await _db.Pedidos
+        if (usuarioId is not null)
+            await GarantirUsuarioAtivoAsync(usuarioId.Value);
+
+        var consulta = _db.Pedidos
             .Include(p => p.PedidoItems)
+            .AsQueryable();
+
+        if (usuarioId is not null)
+            consulta = consulta.Where(p => p.UsuarioId == usuarioId.Value);
+
+        var pedido = await consulta
             .FirstOrDefaultAsync(p => p.Id == id)
             ?? throw ErroDeNegocioException.NaoEncontrado("Pedido não encontrado.");
 
@@ -255,6 +349,37 @@ public class PedidoService
             throw new ErroDeNegocioException("Adicione pelo menos um item ao pedido.");
 
         return normalizados;
+    }
+
+    private async Task<Dictionary<int, decimal>> CarregarDescontosAtivosAsync(
+        IEnumerable<int> produtoIds)
+    {
+        var ids = produtoIds.Distinct().ToList();
+
+        if (ids.Count == 0)
+            return new Dictionary<int, decimal>();
+
+        var descontos = await _db.PromocaoItems
+            .AsNoTracking()
+            .Where(i => i.Promocao.Ativa && ids.Contains(i.ProdutoId))
+            .Select(i => new { i.ProdutoId, i.Promocao.DescontoPercentual })
+            .ToListAsync();
+
+        return descontos
+            .GroupBy(d => d.ProdutoId)
+            .ToDictionary(g => g.Key, g => g.First().DescontoPercentual);
+    }
+
+    private static decimal PrecoVenda(
+        Produto produto, IReadOnlyDictionary<int, decimal> descontos)
+    {
+        if (!descontos.TryGetValue(produto.Id, out var descontoPercentual))
+            return produto.Preco;
+
+        return Math.Round(
+            produto.Preco * (1 - descontoPercentual / 100m),
+            2,
+            MidpointRounding.AwayFromZero);
     }
 
     private async Task<Dictionary<int, Produto>> CarregarProdutosAsync(IEnumerable<ItemPedidoSalvarDto> itens)
@@ -382,10 +507,28 @@ public class PedidoService
         }
     }
 
+    private async Task<Usuario> ResolverUsuarioAsync(string? cliente, int? usuarioId)
+    {
+        if (usuarioId is null)
+            return await BuscarOuCriarUsuarioAsync(cliente);
+
+        return await _db.Usuarios
+            .FirstOrDefaultAsync(u => u.Id == usuarioId.Value && u.Ativo)
+            ?? throw ErroDeNegocioException.NaoAutorizado("Sessão inválida ou expirada. Entre novamente.");
+    }
+
+    private async Task GarantirUsuarioAtivoAsync(int usuarioId)
+    {
+        var ativo = await _db.Usuarios.AnyAsync(u => u.Id == usuarioId && u.Ativo);
+
+        if (!ativo)
+            throw ErroDeNegocioException.NaoAutorizado("Sessão inválida ou expirada. Entre novamente.");
+    }
+
     /// <summary>
-    /// O banco exige um UsuarioId em Pedido. Como o sistema ainda não tem
-    /// cadastro de usuários, o cliente digitado é buscado pelo nome; se não
-    /// existir, é criado um usuário mínimo sem login (SenhaHash = SEM_LOGIN).
+    /// Pedidos anônimos do painel web ainda usam o nome digitado. Busca um
+    /// usuário ativo pelo nome ou cria um cadastro mínimo sem login
+    /// (SenhaHash = SEM_LOGIN). Pedidos autenticados usam o id do token.
     /// </summary>
     private async Task<Usuario> BuscarOuCriarUsuarioAsync(string? cliente)
     {
@@ -398,7 +541,7 @@ public class PedidoService
             throw new ErroDeNegocioException("O nome do cliente deve ter no máximo 120 caracteres.");
 
         var existente = await _db.Usuarios
-            .FirstOrDefaultAsync(u => u.Nome.ToLower() == nome.ToLower());
+            .FirstOrDefaultAsync(u => u.Ativo && u.Nome.ToLower() == nome.ToLower());
 
         if (existente is not null)
             return existente;

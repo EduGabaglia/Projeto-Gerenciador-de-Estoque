@@ -147,11 +147,24 @@
 
                         <div class="admin-info">
 
-                            <strong>Administrador</strong>
+                            <strong>@(User.Identity?.Name ?? "Administrador")</strong>
 
-                            <span>Admin</span>
+                            <span>Administrador</span>
 
                         </div>
+
+                        <form asp-controller="Login"
+                              asp-action="Sair"
+                              method="post"
+                              class="admin-logout-form">
+
+                            <button type="submit"
+                                    class="admin-logout"
+                                    title="Sair do sistema">
+                                Sair
+                            </button>
+
+                        </form>
 
                     </div>
 

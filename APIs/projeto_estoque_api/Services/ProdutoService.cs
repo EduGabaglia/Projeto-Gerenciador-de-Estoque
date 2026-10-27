@@ -12,7 +12,8 @@ public class ProdutoService
 
     public ProdutoService(EstoqueDbContext db) => _db = db;
 
-    public async Task<ProdutosPaginaDto> ListarAsync(string? busca, int? categoriaId, int pagina, int itensPorPagina)
+    public async Task<ProdutosPaginaDto> ListarAsync(
+        string? busca, int? categoriaId, bool? emPromocao, int pagina, int itensPorPagina)
     {
         pagina = Math.Max(1, pagina);
         itensPorPagina = Math.Clamp(itensPorPagina, 1, 100);
@@ -33,6 +34,9 @@ public class ProdutoService
 
         if (categoriaId is > 0)
             consulta = consulta.Where(p => p.CategoriaId == categoriaId);
+
+        if (emPromocao == true)
+            consulta = consulta.Where(p => p.PromocaoItems.Any(i => i.Promocao.Ativa));
 
         var total = await consulta.CountAsync();
         var totalPaginas = Math.Max(1, (int)Math.Ceiling(total / (double)itensPorPagina));

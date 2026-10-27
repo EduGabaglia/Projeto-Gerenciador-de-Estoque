@@ -37,6 +37,16 @@ namespace projeto_estoque_web.Models.view_models
         public string StatusClasse { get; set; } = "pendente";
         public string Cliente { get; set; } = string.Empty;
         public int QuantidadeItens { get; set; }
+        public List<PedidoItemResumoViewModel> Itens { get; set; } = new();
+    }
+
+    public class PedidoItemResumoViewModel
+    {
+        public int ProdutoId { get; set; }
+        public string NomeProduto { get; set; } = string.Empty;
+        public int Quantidade { get; set; }
+        public decimal PrecoUnitario { get; set; }
+        public decimal Subtotal { get; set; }
     }
 
     public class ProdutoMaisVendidoViewModel

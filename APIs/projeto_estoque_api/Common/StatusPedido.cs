@@ -8,7 +8,7 @@ public static class StatusPedido
 {
     public static readonly string[] Validos =
     {
-        "PENDENTE", "PAGO", "PROCESSANDO", "ENVIADO", "ENTREGUE", "CANCELADO"
+        "PENDENTE", "PAGO", "PROCESSANDO", "PRONTO_PARA_RETIRADA", "RETIRADO", "CANCELADO"
     };
 
     public static bool Valido(string status) => Validos.Contains(status);
@@ -37,6 +37,12 @@ public static class StatusPedido
         {
             "" => null,
             "PREPARANDO" => "PROCESSANDO",
+            "PRONTO" => "PRONTO_PARA_RETIRADA",
+            "PRONTO PARA RETIRADA" => "PRONTO_PARA_RETIRADA",
+            "PRONTO_PARA_RETIRADA" => "PRONTO_PARA_RETIRADA",
+            // Compatibilidade com valores usados antes da retirada na loja.
+            "ENVIADO" => "PRONTO_PARA_RETIRADA",
+            "ENTREGUE" => "RETIRADO",
             _ => Valido(texto) ? texto : null
         };
     }
@@ -47,8 +53,8 @@ public static class StatusPedido
         "PENDENTE" => "Pendente",
         "PAGO" => "Pago",
         "PROCESSANDO" => "Preparando",
-        "ENVIADO" => "Enviado",
-        "ENTREGUE" => "Entregue",
+        "PRONTO_PARA_RETIRADA" => "Pronto para retirada",
+        "RETIRADO" => "Retirado",
         "CANCELADO" => "Cancelado",
         _ => status
     };
@@ -59,8 +65,10 @@ public static class StatusPedido
         "pendente" => "pendente",
         "pago" => "pago",
         "processando" => "preparando",
-        "enviado" => "enviado",
-        "entregue" => "entregue",
+        "pronto_para_retirada" => "pronto",
+        "retirado" => "retirado",
+        "enviado" => "pronto",
+        "entregue" => "retirado",
         "cancelado" => "cancelado",
         _ => "pendente"
     };

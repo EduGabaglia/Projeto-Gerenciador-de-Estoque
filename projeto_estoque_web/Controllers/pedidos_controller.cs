@@ -12,7 +12,7 @@ namespace projeto_estoque_web.Controllers
 
         public static readonly string[] StatusDisponiveis =
         {
-            "Pendente", "Pago", "Preparando", "Enviado", "Entregue", "Cancelado"
+            "Pendente", "Pago", "Preparando", "Pronto para retirada", "Retirado", "Cancelado"
         };
 
         private readonly EstoqueApiClient _api;
@@ -29,7 +29,7 @@ namespace projeto_estoque_web.Controllers
             {
                 TotalPedidos = dados.Resumo.TotalPedidos,
                 PedidosPendentes = dados.Resumo.Pendentes,
-                PedidosEntregues = dados.Resumo.Entregues,
+                PedidosRetirados = dados.Resumo.Retirados,
                 ReceitaTotal = dados.Resumo.ReceitaTotal,
                 Pedidos = dados.Itens.Select(pedido => new PedidoResumoViewModel
                 {
@@ -39,7 +39,15 @@ namespace projeto_estoque_web.Controllers
                     Status = pedido.StatusLabel,
                     StatusClasse = pedido.StatusClasse,
                     Cliente = pedido.Cliente,
-                    QuantidadeItens = pedido.TotalItens
+                    QuantidadeItens = pedido.TotalItens,
+                    Itens = pedido.Itens.Select(item => new PedidoItemResumoViewModel
+                    {
+                        ProdutoId = item.ProdutoId,
+                        NomeProduto = item.NomeProduto,
+                        Quantidade = item.Quantidade,
+                        PrecoUnitario = item.PrecoUnitario,
+                        Subtotal = item.Subtotal
+                    }).ToList()
                 }).ToList(),
                 Busca = busca ?? string.Empty,
                 PaginaAtual = dados.Pagina,
@@ -216,9 +224,17 @@ namespace projeto_estoque_web.Controllers
 
             ViewBag.Produtos = produtos
                 .OrderBy(p => p.Nome)
-                .Select(p => new SelectListItem($"{p.Nome} — {p.Preco.ToString("C")}", p.Id.ToString()))
+                .Select(p => new SelectListItem(
+                    $"{p.Nome} — {PrecoVigente(p).ToString("C")}" +
+                    (p.EmPromocao ? " (promoção)" : string.Empty),
+                    p.Id.ToString()))
                 .ToList();
         }
+
+        private static decimal PrecoVigente(ProdutoApiDto produto)
+            => produto.EmPromocao && produto.PrecoPromocional is decimal promocional
+                ? promocional
+                : produto.Preco;
 
         private static SelectList ListaStatus(string? selecionado)
             => new(StatusDisponiveis, selecionado);

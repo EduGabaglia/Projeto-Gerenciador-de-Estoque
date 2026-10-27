@@ -200,7 +200,7 @@ Acesso cross-controller via propriedades `internal static` (`TodosOsProdutos`, `
 | ID | Requisito | Evidência |
 | --- | --- | --- |
 | **RF-44** | Listar pedidos em tabela: código, data, cliente, nº de itens, valor e status, com busca e paginação. | `Views/Pedidos/Index.cshtml:120-208` |
-| **RF-45** | Exibir indicadores: total de pedidos, pendentes, entregues e receita total. | `pedidos_controller.cs:138-148` |
+| **RF-45** | Exibir indicadores: total de pedidos, pendentes, retirados e receita total. | `pedidos_controller.cs:138-148` |
 | **RF-46** | Permitir busca por **nome do cliente ou código exato** do pedido. | `pedidos_controller.cs:103-111` |
 | **RF-47** | Permitir **criação de pedido** com múltiplos itens, adicionando e removendo linhas dinamicamente na tela. | `Views/Pedidos/_PedidoForm.cshtml:27-81`, `wwwroot/js/pedidos.js:31-53` |
 | **RF-48** | Permitir **edição de pedido** (cliente, data, status e itens). | `pedidos_controller.cs:288-405` |
@@ -299,7 +299,7 @@ Acesso cross-controller via propriedades `internal static` (`TodosOsProdutos`, `
 
 | # | Regra | Evidência |
 | --- | --- | --- |
-| **RN-24** | O **status pertence a uma lista fechada**: `Pendente`, `Preparando`, `Entregue`, `Cancelado`. | `pedidos_controller.cs:12-15` |
+| **RN-24** | O **status pertence a uma lista fechada**: `Pendente`, `Pago`, `Preparando`, `Pronto para retirada`, `Retirado`, `Cancelado`. | `pedidos_controller.cs:12-15` |
 | **RN-25** | O status é **normalizado sem distinção de caixa**; valor fora da lista ou vazio **cai para "Pendente"**. | `pedidos_controller.cs:446-450` |
 | **RN-26** | **Cliente** obrigatório (máx. 80) e **Data** obrigatória, com default = data atual. | `pedido.cs:9-16`, `pedidos_controller.cs:221` |
 | **RN-27** | O pedido **precisa conter ao menos 1 item** após a normalização. | `pedidos_controller.cs:238-242, 323-327` |
@@ -312,7 +312,7 @@ Acesso cross-controller via propriedades `internal static` (`TodosOsProdutos`, `
 | **RN-34** | **Reativar um pedido cancelado** revalida **todos** os itens; se **qualquer um** falhar, a operação é **abortada por inteiro** (mensagem "Status não alterado"). | `pedidos_controller.cs:189-207` |
 | **RN-35** | **Excluir** um pedido **não cancelado devolve o estoque**; se já cancelado, **não devolve** (evita devolução duplicada). | `pedidos_controller.cs:415-424` |
 | **RN-36** | Redefinir o status para o **mesmo valor** é uma operação silenciosa (no-op). | `pedidos_controller.cs:173-174` |
-| **RN-37** | **Não existe matriz de transições**: qualquer status pode ir para qualquer outro. Só "Cancelado" (RN-33/RN-34) tem efeito no estoque — inclusive "Entregue" **não** altera o saldo, pois a baixa ocorreu na criação. | `pedidos_controller.cs:176-207` |
+| **RN-37** | **Não existe matriz de transições**: qualquer status pode ir para qualquer outro. Só "Cancelado" (RN-33/RN-34) tem efeito no estoque — inclusive "Retirado" **não** altera o saldo, pois a baixa ocorreu na criação. | `pedidos_controller.cs:176-207` |
 | **RN-38** | **Valor total** = `Σ (quantidade × preço unitário)`; **nº de itens** = quantidade de **linhas distintas**, não o total de unidades. | `pedido.cs:22-24` |
 | **RN-39** | **Receita total e vendas do mês ignoram pedidos cancelados**. | `pedidos_controller.cs:136-143`, `dashboard_controller.cs:33-37` |
 | **RN-40** | A **busca textual** de pedidos casa por nome do cliente (substring) **ou por código exato**; um termo numérico só funciona por igualdade de id. | `pedidos_controller.cs:103-111` |
@@ -416,7 +416,7 @@ Esta seção documenta os 3 fluxos com **efeito colateral no saldo**, por serem 
 7. Atribui o novo status e exibe mensagem
 ```
 
-**Observação:** a transição para "Entregue" **não** mexe no estoque — a baixa ocorreu na criação (RN-30). Consequentemente, um pedido entregue ocupa estoque permanentemente até ser excluído.
+**Observação:** a transição para "Retirado" **não** mexe no estoque — a baixa ocorreu na criação (RN-30). Consequentemente, um pedido retirado ocupa estoque permanentemente até ser excluído.
 
 ---
 
@@ -501,7 +501,7 @@ Severidades: **Crítico** (bloqueia produção) · **Alto** (corrompe dados) · 
 | **RISK-13** | **"Produtos mais vendidos — Este mês"** não filtra o mês: agrega todo o histórico de pedidos não cancelados. | **Médio** | `dashboard_controller.cs:15-26` vs. `Views/Dashboard/index.cshtml:114` | Informação exibida está incorreta em relação ao rótulo. | Aplicar o mesmo filtro de ano/mês de RN-44. |
 | **RISK-14** | **Gráfico "Últimos 7 dias" é falso:** barras com alturas hardcoded no CSS inline. | **Médio** | `Views/Dashboard/index.cshtml:85-102` | Usuário recebe dado fictício como se fosse real. | Calcular a série dos últimos 7 dias a partir de `PedidosController.TodosOsPedidos`. |
 | **RISK-15** | **`TempData` não é exibido nas telas de Estoque.** As mensagens são gravadas e perdidas no redirect para `Index`. | **Médio** | `estoque_controller.cs:71, 108, 138` vs. `Views/Estoque/Index.cshtml` (sem bloco de alerta) | Usuário não recebe confirmação de que a movimentação foi realizada. | Adicionar o bloco de `TempData["Mensagem"]`/`["Erro"]` ao `Estoque/Index.cshtml`. |
-| **RISK-16** | **Não existe matriz de transição de status**; é possível reverter um pedido "Entregue" para "Pendente" sem efeito no estoque. | **Médio** | `pedidos_controller.cs:176-207` | Fluxos de negócio não previstos pelo usuário podem produzir estoque inconsistente. | Definir e implementar a máquina de estados (ex.: `Entregue` e `Cancelado` são terminais). |
+| **RISK-16** | **Não existe matriz de transição de status**; é possível reverter um pedido "Retirado" para "Pendente" sem efeito no estoque. | **Médio** | `pedidos_controller.cs:176-207` | Fluxos de negócio não previstos pelo usuário podem produzir estoque inconsistente. | Definir e implementar a máquina de estados (ex.: `Retirado` e `Cancelado` são terminais). |
 | **RISK-17** | **`Produto.Categoria` não é validada no servidor** — apenas popula o `<select>`; um POST manipulado aceita categoria inexistente. | **Médio** | `produtos_controller.cs:79-91` (sem verificação), `:148-151` | Cria categoria-fantasma que aparece nas listagens e quebra RN-14/RN-15. | Validar a existência da categoria no controller antes de gravar. |
 | **RISK-18** | **Preço do item é re-snapshotado na edição do pedido**; o valor histórico muda se o preço do produto mudar. | **Baixo** | `pedidos_controller.cs:377-379` | Margem histórica do pedido não é preservada. | Preservar `PrecoUnitario` quando apenas a quantidade muda, ou versionar o preço. |
 | **RISK-19** | **`MediaProdutosPorCategoria`** divide o total de produtos por categorias **em uso**, ignorando produtos em categorias vazias. | **Baixo** | `categorias_controller.cs:65-67` | Métrica não representa a média real. | Dividir pelo total de categorias, ou documentar que a métrica é "por categoria em uso". |
@@ -540,7 +540,7 @@ Severidades: **Crítico** (bloqueia produção) · **Alto** (corrompe dados) · 
 | 5 | Envolver criação/edição de pedido em **transação** e usar `FirstOrDefault` com tratamento em todos os laços. | RISK-10 |
 | 6 | **Validar a categoria no servidor** antes de gravar o produto. | RISK-17 |
 | 7 | **Exibir `TempData`** nas telas de Estoque. | RISK-15 |
-| 8 | Definir e implementar a **máquina de estados de status do pedido** (`Entregue`/`Cancelado` como terminais). | RISK-16 |
+| 8 | Definir e implementar a **máquina de estados de status do pedido** (`Retirado`/`Cancelado` como terminais). | RISK-16 |
 | 9 | **Remover a edição direta de `Quantidade`** na tela de Produtos, ou exigir um ajuste registrado. | RISK-11 |
 | 10 | **Corrigir o Dashboard**: filtro de mês em "mais vendidos" e gráfico real dos últimos 7 dias. | RISK-13, RISK-14, RISK-28 |
 | 11 | Adicionar `[ValidateAntiForgeryToken]` no login e **reativar o HTTPS**. | RISK-04, RISK-05 |

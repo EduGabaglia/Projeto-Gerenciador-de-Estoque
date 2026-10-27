@@ -19,4 +19,10 @@ public class ErroDeNegocioException : Exception
 
     public static ErroDeNegocioException Conflito(string mensagem)
         => new(mensagem, StatusCodes.Status409Conflict);
+
+    public static ErroDeNegocioException NaoAutorizado(string mensagem)
+        => new(mensagem, StatusCodes.Status401Unauthorized);
+
+    public static ErroDeNegocioException Proibido(string mensagem)
+        => new(mensagem, StatusCodes.Status403Forbidden);
 }

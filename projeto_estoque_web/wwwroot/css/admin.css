@@ -248,6 +248,36 @@ body.dark {
     color: #777777;
 }
 
+.admin-logout-form {
+    margin-left: auto;
+}
+
+.admin-logout {
+    padding: 6px 9px;
+
+    border: 1px solid #374151;
+    border-radius: 6px;
+
+    background: transparent;
+    color: #d1d5db;
+
+    font-size: 10px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        color 0.2s ease;
+}
+
+.admin-logout:hover {
+    background: #1f2937;
+    border-color: #4b5563;
+    color: #ffffff;
+}
+
 /* =========================
    ÁREA PRINCIPAL
 ========================= */
@@ -479,6 +509,7 @@ body.dark .produtos-card,
 body.dark .categorias-card,
 body.dark .pedidos-card,
 body.dark .promocoes-card,
+body.dark .estoque-card,
 body.dark .dashboard-panel,
 body.dark .produtos-panel,
 body.dark .categorias-panel,
@@ -494,7 +525,8 @@ body.dark .dashboard-card span,
 body.dark .produtos-card span,
 body.dark .categorias-card span,
 body.dark .pedidos-card span,
-body.dark .promocoes-card span {
+body.dark .promocoes-card span,
+body.dark .estoque-card span {
     color: #9ca3af;
 }
 
@@ -502,7 +534,8 @@ body.dark .dashboard-card strong,
 body.dark .produtos-card strong,
 body.dark .categorias-card strong,
 body.dark .pedidos-card strong,
-body.dark .promocoes-card strong {
+body.dark .promocoes-card strong,
+body.dark .estoque-card strong {
     color: #f9fafb;
 }
 
@@ -653,6 +686,54 @@ body.dark .desconto-tag {
     color: #93c5fd;
 }
 
+body.dark .btn-produtos {
+    background: #0f172a;
+    border-color: #334155;
+    color: #d1d5db;
+}
+
+body.dark .btn-produtos:hover {
+    background: #172554;
+    border-color: #60a5fa;
+}
+
+body.dark .produtos-total,
+body.dark .produto-nome,
+body.dark .produto-subtotal {
+    color: #e5e7eb;
+}
+
+body.dark .produtos-ver {
+    color: #60a5fa;
+}
+
+body.dark .produto-preco,
+body.dark .produtos-vazio {
+    color: #9ca3af;
+}
+
+body.dark .pedido-produtos-linha td {
+    background: #172033;
+    border-bottom-color: #334155;
+}
+
+body.dark .produtos-detalhe {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+body.dark .produtos-detalhe-titulo {
+    color: #cbd5e1;
+}
+
+body.dark .produto-linha {
+    border-top-color: #1f2937;
+}
+
+body.dark .produto-qtd {
+    color: #93c5fd;
+}
+
 body.dark .form-group label {
     color: #d1d5db;
 }
@@ -682,6 +763,13 @@ body.dark .status.preparando {
     color: #60a5fa;
 }
 
+body.dark .status.pronto,
+body.dark .status.enviado {
+    background: #3b2a5f;
+    color: #c4b5fd;
+}
+
+body.dark .status.retirado,
 body.dark .status.entregue,
 body.dark .status.disponivel,
 body.dark .status.emuso {

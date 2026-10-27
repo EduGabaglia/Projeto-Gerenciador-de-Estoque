@@ -109,7 +109,7 @@ namespace projeto_estoque_web.Services
     public record PedidosResumoApiDto(
         int TotalPedidos,
         int Pendentes,
-        int Entregues,
+        int Retirados,
         decimal ReceitaTotal);
 
     public record PedidosPaginaApiDto(

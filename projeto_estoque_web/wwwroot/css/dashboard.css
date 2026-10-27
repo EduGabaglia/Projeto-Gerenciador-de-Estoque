@@ -430,12 +430,14 @@ body.dark-mode td {
   color: #0369a1;
 }
 
-.status.enviado {
+.status.enviado,
+.status.pronto {
   background: #ede9fe;
   color: #6d28d9;
 }
 
-.status.entregue {
+.status.entregue,
+.status.retirado {
   background: #e5f8ed;
   color: #16804b;
 }
@@ -465,12 +467,14 @@ body.dark-mode .status.pago {
   color: #7dd3fc;
 }
 
-body.dark-mode .status.enviado {
+body.dark-mode .status.enviado,
+body.dark-mode .status.pronto {
   background: #3b2a5f;
   color: #c4b5fd;
 }
 
-body.dark-mode .status.entregue {
+body.dark-mode .status.entregue,
+body.dark-mode .status.retirado {
   background: #1f4935;
   color: #6fd39d;
 }

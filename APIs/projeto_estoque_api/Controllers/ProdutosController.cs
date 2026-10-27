@@ -16,10 +16,11 @@ public class ProdutosController : ControllerBase
     public async Task<IActionResult> Listar(
         [FromQuery] string? busca,
         [FromQuery] int? categoriaId,
+        [FromQuery] bool? emPromocao,
         [FromQuery] int pagina = 1,
         [FromQuery] int itensPorPagina = 8)
     {
-        return Ok(await _produtos.ListarAsync(busca, categoriaId, pagina, itensPorPagina));
+        return Ok(await _produtos.ListarAsync(busca, categoriaId, emPromocao, pagina, itensPorPagina));
     }
 
     [HttpGet("{id:int}")]

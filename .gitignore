@@ -6,7 +6,8 @@ obj/
 *.log
 .idea/
 *.tmp
-*.tempnode_modules/
+*.temp
+node_modules/
 .expo/
 # React Native / Expo
 node_modules/
@@ -19,4 +20,5 @@ obj/
 
 # Arquivos locais
 .env
+.env*.local
 .vs/
